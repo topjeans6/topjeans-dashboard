@@ -23,7 +23,9 @@ load_dotenv()
 # ─── App Config ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "topjeans-secret-2024-change-me")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///topjeans.db"
+database_url = os.environ.get("DATABASE_URL", "sqlite:///topjeans.db")
+if database_url.startswith("postgres://"): database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB
