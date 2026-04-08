@@ -110,7 +110,7 @@ def logout(): logout_user(); return redirect(url_for("login"))
 def dashboard():
     sheets,_ = get_google_services()
     inv   = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:V") if sheets else []
-    sales = sheets_get(sheets, SALES_SHEET_ID, "Mar. 2026!A2:AZ") if sheets else []
+    sales = sheets_get(sheets, SALES_SHEET_ID, datetime.now().strftime("%B %Y") + "!A2:AZ") if sheets else []
     total   = sum(1 for r in inv if len(r)>1 and r[1])
     instock = sum(1 for r in inv if len(r)>1 and r[1]=="in Stock")
     sold    = sum(1 for r in inv if len(r)>1 and r[1]=="Sold Out")
@@ -142,7 +142,7 @@ def inventory():
 @login_required
 def sales():
     sheets,_ = get_google_services()
-    rows = sheets_get(sheets, SALES_SHEET_ID, "Mar. 2026!A2:AZ") if sheets else []
+    rows = sheets_get(sheets, SALES_SHEET_ID, datetime.now().strftime("%B %Y") + "!A2:AZ") if sheets else []
     local = SaleLog.query.order_by(SaleLog.created_at.desc()).all()
     return render_template("sales.html", rows=rows, local_sales=local, google_ok=sheets is not None)
 
@@ -172,7 +172,7 @@ def new_sale():
         row=[now,current_user.name or current_user.username,channel,customer,phone,"","",
              product_name,sku,slip_url,"1",str(int(price)),"",str(int(price)),now,slip_url,
              "โอน/COD","","","","",now,"",str(int(cost)),str(int(price-cost)),"","","","",channel]
-        sheets_ok=sheets_append(sheets,SALES_SHEET_ID,"Mar. 2026!A:A",[row]) if sheets else False
+        sheets_ok=sheets_append(sheets,SALES_SHEET_ID,datetime.now().strftime("%B %Y") + "!A:A",[row]) if sheets else False
         log=SaleLog(staff_id=current_user.id,sku=sku,product_name=product_name,customer=customer,
             phone=phone,price=price,cost=cost,channel=channel,slip_url=slip_url,slip_drive_id=slip_drive_id,notes=notes)
         db.session.add(log); db.session.commit()
