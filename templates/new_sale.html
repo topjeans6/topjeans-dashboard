@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block ptitle %}บันทึกการขาย{% endblock %}
+{% block content %}
+<div style="max-width:680px">
+<div class="card"><div class="ch"><span class="ct">รายการขายใหม่</span></div><div class="cb">
+<form method="POST" enctype="multipart/form-data">
+  <div class="fg"><label class="fl">เลือก SKU *</label>
+    <select name="sku" id="ss" class="fc" required onchange="onSku(this.value)">
+      <option value="">— เลือก SKU —</option>
+      {% for r in inventory_items %}{% if r|length>3 %}
+      <option value="{{ r[0] }}" data-brand="{{ r[2] }}" data-model="{{ r[3] }}" data-style="{{ r[9] if r|length>9 else "" }}" data-fabric="{{ r[10] if r|length>10 else "" }}" data-size="{{ r[11] if r|length>11 else "" }}" data-cond="{{ r[13] if r|length>13 else "" }}" data-cost="{{ r[15] if r|length>15 else "" }}" data-price="{{ r[19] if r|length>19 else "" }}" data-img="{{ r[22] if r|length>22 else "" }}">
+        {{ r[0] }} — {{ r[2] }} {{ r[3] }} {% if r|length>11 %}({{ r[11][:12] }}){% endif %}
+      </option>{% endif %}{% endfor %}
+    </select>
+  </div>
+  <div id="pi" style="display:none;margin-bottom:18px;padding:14px;background:var(--bb);border:1px solid #bfdbfe;border-radius:var(--rs);font-size:13px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px">
+      <div><span style="color:var(--t3)">Brand:</span> <strong id="pi-b"></strong></div>
+      <div><span style="color:var(--t3)">รุ่น:</span> <strong id="pi-m"></strong></div>
+      <div><span style="color:var(--t3)">ทรง:</span> <span id="pi-s"></span></div>
+      <div><span style="color:var(--t3)">ขนาด:</span> <span id="pi-sz"></span></div>
+      <div><span style="color:var(--t3)">เนื้อผ้า:</span> <span id="pi-f"></span></div>
+      <div><span style="color:var(--t3)">สภาพ:</span> <span id="pi-c"></span></div>
+    </div>
+  </div>
+  <input type="hidden" name="product_name" id="pni">
+  <div class="fgrid">
+    <div class="fg"><label class="fl">ราคาขาย (บาท) *</label><input type="number" name="price" id="pri" class="fc" placeholder="0" required min="0" oninput="calc()"></div>
+    <div class="fg"><label class="fl">ต้นทุน (บาท)</label><input type="number" name="cost" id="coi" class="fc" placeholder="0" min="0" oninput="calc()"></div>
+  </div>
+  <div id="pb" style="display:none;margin:-8px 0 18px;padding:10px 14px;background:var(--gb);border:1px solid #bbf7d0;border-radius:var(--rs);font-size:13px;gap:24px">
+    กำไร: <strong id="pv" style="color:var(--green)">0 บาท</strong> &nbsp; Margin: <strong id="mv" style="color:var(--green)">0%</strong>
+  </div>
+  <div class="fgrid">
+    <div class="fg"><label class="fl">ชื่อลูกค้า *</label><input type="text" name="customer" class="fc" placeholder="ชื่อ-นามสกุล" required></div>
+    <div class="fg"><label class="fl">เบอร์โทรศัพท์</label><input type="tel" name="phone" class="fc" placeholder="08x-xxx-xxxx"></div>
+  </div>
+  <div class="fg"><label class="fl">ช่องทาง *</label>
+    <select name="channel" class="fc" required>
+      <option value="">— เลือกช่องทาง —</option>
+      <option>Marketplace - Bell</option><option>Marketplace - Putcharaporn Netnong</option>
+      <option>Marketplace - Topjeans VTG</option><option>Facebook</option>
+      <option>Facebook Page</option><option>Instagram</option>
+      <option>Shopee</option><option>LAZADA</option><option>TikTok</option>
+      <option>Line my Shop</option><option>Walk-in</option><option>อื่นๆ</option>
+    </select>
+  </div>
+  <div class="fg"><label class="fl">แนบสลิปการโอนเงิน</label>
+    <div id="dz" style="border:2px dashed var(--b2);border-radius:var(--rs);padding:28px;text-align:center;cursor:pointer;background:var(--s2)" onclick="document.getElementById('sf').click()" ondragover="event.preventDefault();this.style.borderColor='var(--blue)'" ondragleave="this.style.borderColor='var(--b2)'" ondrop="drop(event)">
+      <div style="font-size:13px;color:var(--t2)">คลิกหรือลากไฟล์มาวาง</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">PNG, JPG ไม่เกิน 16MB</div>
+      <input type="file" name="slip" id="sf" accept="image/*" style="display:none" onchange="prev(this)">
+    </div>
+    <div id="sp" style="display:none;margin-top:10px;align-items:center;gap:10px">
+      <img id="si" src="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
+      <div><div id="sn" style="font-size:13px;font-weight:500"></div><div id="ss2" style="font-size:11px;color:var(--t3);margin-top:2px"></div>
+      <button type="button" onclick="clr()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">ลบสลิป</button></div>
+    </div>
+  </div>
+  <div class="fg"><label class="fl">หมายเหตุ</label><textarea name="notes" class="fc" rows="2" placeholder="ตำหนิ, ขนาดพิเศษ..."></textarea></div>
+  <div style="display:flex;gap:10px;padding-top:8px">
+    <button type="submit" class="btn btn-ok" style="flex:1">บันทึกการขาย + ตัดสต๊อก</button>
+    <a href="{{ url_for("sales") }}" class="btn btn-s">ยกเลิก</a>
+  </div>
+</form>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+function onSku(v){
+  const o=document.getElementById("ss").options[document.getElementById("ss").selectedIndex];
+  if(!v){document.getElementById("pi").style.display="none";return}
+  document.getElementById("pi-b").textContent=o.dataset.brand||"—";
+  document.getElementById("pi-m").textContent=o.dataset.model||"—";
+  document.getElementById("pi-s").textContent=o.dataset.style||"—";
+  document.getElementById("pi-sz").textContent=o.dataset.size||"—";
+  document.getElementById("pi-f").textContent=o.dataset.fabric||"—";
+  document.getElementById("pi-c").textContent=o.dataset.cond||"—";
+  document.getElementById("pi").style.display="block";
+  document.getElementById("pni").value=(o.dataset.brand+" "+o.dataset.model+" "+o.dataset.size).trim();
+  document.getElementById("pri").value=o.dataset.price||"";
+  document.getElementById("coi").value=o.dataset.cost||"";
+  calc();
+}
+function calc(){
+  const p=parseFloat(document.getElementById("pri").value)||0;
+  const c=parseFloat(document.getElementById("coi").value)||0;
+  const pr=p-c;
+  document.getElementById("pv").textContent=pr.toLocaleString("th-TH")+" บาท";
+  document.getElementById("pv").style.color=pr>=0?"var(--green)":"var(--red)";
+  document.getElementById("mv").textContent=p>0?(pr/p*100).toFixed(1)+"%":"0%";
+  document.getElementById("pb").style.display="flex";
+}
+function prev(i){
+  if(!i.files[0])return;
+  const f=i.files[0];
+  const r=new FileReader();
+  r.onload=e=>{
+    document.getElementById("si").src=e.target.result;
+    document.getElementById("sn").textContent=f.name;
+    document.getElementById("ss2").textContent=(f.size/1024).toFixed(0)+" KB";
+    document.getElementById("sp").style.display="flex";
+    document.getElementById("dz").style.borderColor="var(--green)";
+  };r.readAsDataURL(f);
+}
+function clr(){document.getElementById("sf").value="";document.getElementById("sp").style.display="none";document.getElementById("dz").style.borderColor="var(--b2)";}
+function drop(e){e.preventDefault();document.getElementById("dz").style.borderColor="var(--b2)";const f=e.dataTransfer.files[0];if(!f||!f.type.startsWith("image/"))return;const dt=new DataTransfer();dt.items.add(f);const i=document.getElementById("sf");i.files=dt.files;prev(i);}
+</script>{% endblock %}

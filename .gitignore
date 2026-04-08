@@ -1,0 +1,9 @@
+credentials.json
+.env
+instance/
+*.db
+venv/
+__pycache__/
+uploads/
+*.pyc
+.DS_Store

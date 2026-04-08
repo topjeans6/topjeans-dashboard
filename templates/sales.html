@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block ptitle %}รายการขาย{% endblock %}
+{% block content %}
+<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+  <span style="font-size:13px;color:var(--t2)">{{ local_sales|length }} รายการในระบบ</span>
+  <a href="{{ url_for("new_sale") }}" class="btn btn-p btn-sm" style="margin-left:auto">+ บันทึกการขาย</a>
+</div>
+<div class="card" style="margin-bottom:16px"><div style="overflow-x:auto">
+{% if local_sales %}
+<table class="dt"><thead><tr><th>วันที่</th><th>SKU</th><th>สินค้า</th><th>ลูกค้า</th><th>เบอร์</th><th>ราคา</th><th>ต้นทุน</th><th>กำไร</th><th>ช่องทาง</th><th>พนักงาน</th><th>สลิป</th></tr></thead>
+<tbody>{% for s in local_sales %}<tr>
+  <td style="font-size:12px;color:var(--t2)">{{ s.created_at.strftime("%d/%m/%y %H:%M") }}</td>
+  <td style="font-family:'IBM Plex Mono',monospace;font-size:11px">{{ s.sku }}</td>
+  <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.product_name }}</td>
+  <td>{{ s.customer }}</td>
+  <td style="font-size:12px">{{ s.phone }}</td>
+  <td style="font-weight:500">{{ "{:,.0f}".format(s.price) }}</td>
+  <td style="font-size:12px;color:var(--t2)">{{ "{:,.0f}".format(s.cost) }}</td>
+  <td style="font-weight:500;color:{% if s.price-s.cost>=0 %}var(--green){% else %}var(--red){% endif %}">{{ "{:,.0f}".format(s.price-s.cost) }}</td>
+  <td><span class="badge bb" style="font-size:10px">{{ s.channel }}</span></td>
+  <td style="font-size:12px">{{ s.staff.name or s.staff.username if s.staff else "—" }}</td>
+  <td>{% if s.slip_url %}<a href="{{ s.slip_url }}" target="_blank" style="color:var(--blue);font-size:12px">ดูสลิป</a>{% else %}<span style="color:var(--t3)">—</span>{% endif %}</td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<div style="padding:40px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for("new_sale") }}" style="color:var(--blue)">บันทึกรายการแรก</a></div>{% endif %}
+</div></div>{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block ptitle %}จัดการทีมงาน{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:flex-start">
+<div class="card"><div class="ch"><span class="ct">สมาชิกทั้งหมด</span></div>
+<table class="dt"><thead><tr><th>ชื่อ</th><th>Username</th><th>Role</th><th>รายการขาย</th><th></th></tr></thead>
+<tbody>{% for u in users %}<tr>
+  <td style="font-weight:500">{{ u.name or "—" }}</td>
+  <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ u.username }}</td>
+  <td>{% if u.role=="admin" %}<span class="badge bb">Admin</span>{% else %}<span class="badge bgr">Staff</span>{% endif %}</td>
+  <td style="color:var(--t2)">{{ u.sales|length }} รายการ</td>
+  <td>{% if u.id!=current_user.id %}<form method="POST" style="display:inline" onsubmit="return confirm('ลบ account นี้?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="user_id" value="{{ u.id }}"><button type="submit" class="btn" style="background:var(--rb);color:var(--red);border-color:#fecaca;font-size:12px;padding:4px 10px">ลบ</button></form>{% else %}<span class="badge bg">ตัวคุณ</span>{% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
+<div class="card"><div class="ch"><span class="ct">เพิ่มสมาชิกใหม่</span></div><div class="cb">
+<form method="POST"><input type="hidden" name="action" value="create">
+  <div class="fg"><label class="fl">ชื่อ-สกุล</label><input type="text" name="name" class="fc" placeholder="ชื่อที่แสดง" required></div>
+  <div class="fg"><label class="fl">Username *</label><input type="text" name="username" class="fc" required></div>
+  <div class="fg"><label class="fl">รหัสผ่าน *</label><input type="password" name="password" class="fc" required minlength="6"></div>
+  <div class="fg"><label class="fl">สิทธิ์</label><select name="role" class="fc"><option value="staff">Staff</option><option value="admin">Admin</option></select></div>
+  <button type="submit" class="btn btn-p" style="width:100%">สร้าง Account</button>
+</form></div></div>
+</div>{% endblock %}

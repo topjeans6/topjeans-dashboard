@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block ptitle %}Overview{% endblock %}
+{% block content %}
+<div class="kgrid">
+  <div class="kcard"><div class="klabel">สินค้าทั้งหมด</div><div class="kval">{{ total }}</div><div class="ksub">SKU ในระบบ</div></div>
+  <div class="kcard kg"><div class="klabel">In Stock</div><div class="kval">{{ instock }}</div><div class="ksub">{{ "%.0f"|format(instock/total*100 if total else 0) }}% ของทั้งหมด</div></div>
+  <div class="kcard kr"><div class="klabel">Sold Out</div><div class="kval">{{ sold }}</div><div class="ksub">ขายออกไปแล้ว</div></div>
+  <div class="kcard kb"><div class="klabel">ยอดขาย (Sheets)</div><div class="kval">{{ "{:,.0f}".format(sales_total) }}</div><div class="ksub">บาท</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+  <div class="card">
+    <div class="ch"><span class="ct">Brand Distribution</span></div>
+    <div class="cb"><div style="position:relative;height:220px"><canvas id="bc" role="img" aria-label="brand chart"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">สถานะสินค้า</span></div>
+    <div class="cb">
+      <div style="position:relative;height:170px"><canvas id="sc" role="img" aria-label="status chart"></canvas></div>
+      <div style="display:flex;gap:16px;justify-content:center;font-size:12px;color:var(--t2);margin-top:12px">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#16a34a;display:inline-block"></span>In Stock ({{ instock }})</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#dc2626;display:inline-block"></span>Sold Out ({{ sold }})</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="ch"><span class="ct">รายการขายล่าสุด</span><a href="{{ url_for("new_sale") }}" class="btn btn-p btn-sm">+ เพิ่มรายการ</a></div>
+  <div style="overflow-x:auto">
+    {% if recent_sales %}
+    <table class="dt"><thead><tr><th>วันที่</th><th>SKU</th><th>สินค้า</th><th>ลูกค้า</th><th>ราคา</th><th>กำไร</th><th>ช่องทาง</th><th>พนักงาน</th><th>สลิป</th></tr></thead>
+    <tbody>{% for s in recent_sales %}<tr>
+      <td style="font-size:12px;color:var(--t2)">{{ s.created_at.strftime("%d/%m/%y %H:%M") }}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px">{{ s.sku }}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.product_name }}</td>
+      <td>{{ s.customer }}</td>
+      <td style="font-weight:500">{{ "{:,.0f}".format(s.price) }}</td>
+      <td style="color:var(--green);font-weight:500">{{ "{:,.0f}".format(s.price-s.cost) }}</td>
+      <td><span class="badge bb" style="font-size:10px">{{ s.channel }}</span></td>
+      <td style="font-size:12px">{{ s.staff.name or s.staff.username if s.staff else "-" }}</td>
+      <td>{% if s.slip_url %}<a href="{{ s.slip_url }}" target="_blank" style="color:var(--blue);font-size:12px">ดูสลิป</a>{% else %}<span style="color:var(--t3)">—</span>{% endif %}</td>
+    </tr>{% endfor %}</tbody></table>
+    {% else %}<div style="padding:40px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for("new_sale") }}" style="color:var(--blue)">บันทึกรายการแรก</a></div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const bd={{ brand_count|tojson }};
+const C=["#2563eb","#16a34a","#d97706","#7c3aed","#dc2626","#0891b2","#65a30d"];
+new Chart(document.getElementById("bc"),{type:"bar",data:{labels:Object.keys(bd),datasets:[{data:Object.values(bd),backgroundColor:C,borderWidth:0,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},stepSize:1}}}}});
+new Chart(document.getElementById("sc"),{type:"doughnut",data:{labels:["In Stock","Sold Out"],datasets:[{data:[{{ instock }},{{ sold }}],backgroundColor:["#16a34a","#dc2626"],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:"68%"}});
+</script>
+{% endblock %}
