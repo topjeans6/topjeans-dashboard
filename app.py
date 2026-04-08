@@ -18,6 +18,9 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
+with app.app_context():
+    db.create_all()
+
 INVENTORY_SHEET_ID   = os.getenv("INVENTORY_SHEET_ID","1Vzcs4mUnOKk0VwkouBq3m87fdO3xAV7F9na88PVsS0o")
 SALES_SHEET_ID       = os.getenv("SALES_SHEET_ID","11iPX3SHK-vt6DlN1rJeUXjXsFeHwSFXXCPNFc-AM4kA")
 DRIVE_FOLDER_ID      = os.getenv("DRIVE_FOLDER_ID","")
