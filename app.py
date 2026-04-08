@@ -222,7 +222,6 @@ def init_db():
             db.session.add(User(username="admin",password=generate_password_hash("topjeans2024"),role="admin",name="Admin"))
             db.session.commit(); print("✅ Created admin: admin / topjeans2024")
 
-if __name__=="__main__":
+if __name__ == '__main__':
     init_db()
-    if __name__ == '__main__':
-    app.run(debug=False)app.run(debug=False, port=5000)
+    app.run(debug=False, port=5000)
