@@ -23,8 +23,9 @@ load_dotenv()
 # ─── App Config ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "topjeans-secret-2024-change-me")
-database_url = os.environ.get("DATABASE_URL", "app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///topjeans.db")")
-if database_url.startswith("postgres://"): database_url = database_url.replace("postgres://", "postgresql://", 1)
+database_url = os.getenv("DATABASE_URL", "sqlite:///topjeans.db")
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "uploads"
@@ -119,6 +120,50 @@ def sheets_update(service, sheet_id, range_, values):
         print(f"[Sheets UPDATE] {e}")
         return False
 
+def get_sales_sheet_tabs(service):
+    """ดึงรายชื่อ tab ทั้งหมดจาก Sales Sheet ที่ชื่อเป็น Month Year เช่น March 2026"""
+    try:
+        meta = service.spreadsheets().get(spreadsheetId=SALES_SHEET_ID).execute()
+        tabs = [s["properties"]["title"] for s in meta.get("sheets", [])]
+        # กรองเฉพาะ tab ที่ชื่อเป็น Month Year
+        import calendar
+        months = list(calendar.month_name)[1:]  # ['January', ..., 'December']
+        result = []
+        for tab in tabs:
+            parts = tab.strip().split(" ")
+            if len(parts) == 2 and parts[0] in months and parts[1].isdigit():
+                result.append(tab)
+        # เรียงตามวันที่ล่าสุดก่อน
+        def sort_key(t):
+            parts = t.split(" ")
+            return (int(parts[1]), months.index(parts[0]))
+        result.sort(key=sort_key, reverse=True)
+        return result
+    except Exception as e:
+        print(f"[Sheets TABS] {e}")
+        return []
+
+def get_current_month_tab():
+    """ชื่อ tab เดือนปัจจุบัน เช่น April 2026"""
+    from datetime import datetime
+    now = datetime.now()
+    return now.strftime("%B %Y")
+
+def get_sales_rows(service, tab=None):
+    """ดึงข้อมูลยอดขายจาก tab ที่ระบุ หรือเดือนปัจจุบัน"""
+    if not tab:
+        tab = get_current_month_tab()
+    return sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
+
+def get_all_sales_rows(service):
+    """ดึงข้อมูลยอดขายจากทุก tab รวมกัน"""
+    tabs = get_sales_sheet_tabs(service)
+    all_rows = []
+    for tab in tabs:
+        rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
+        all_rows.extend(rows)
+    return all_rows
+
 def find_sku_row(service, sku):
     """Return (row_index_1based, row_data) or (None, None)."""
     rows = sheets_get(service, INVENTORY_SHEET_ID, "Inventory!A:AK")
@@ -179,8 +224,8 @@ def dashboard():
     sheets, drive = get_google_services()
     inv_rows, sales_rows = [], []
     if sheets:
-        inv_rows   = sheets_get(sheets, INVENTORY_SHEET_ID,  "Inventory!A2:AK")
-        sales_rows = sheets_get(sheets, SALES_SHEET_ID, "รายชื่อลูกค้า!A2:AZ")
+        inv_rows   = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:AK")
+        sales_rows = get_all_sales_rows(sheets)
 
     # KPI
     total  = sum(1 for r in inv_rows if len(r) > 1 and r[1])
@@ -242,11 +287,18 @@ def inventory():
 def sales():
     sheets, _ = get_google_services()
     rows = []
+    tabs = []
+    selected_tab = request.args.get("month", "")
     if sheets:
-        rows = sheets_get(sheets, SALES_SHEET_ID, "รายชื่อลูกค้า!A2:AZ")
+        tabs = get_sales_sheet_tabs(sheets)
+        if not selected_tab and tabs:
+            selected_tab = tabs[0]  # default = เดือนล่าสุด
+        if selected_tab:
+            rows = get_sales_rows(sheets, selected_tab)
     local_sales = SaleLog.query.order_by(SaleLog.created_at.desc()).all()
     return render_template("sales.html", rows=rows, local_sales=local_sales,
-                           google_ok=sheets is not None)
+                           google_ok=sheets is not None,
+                           tabs=tabs, selected_tab=selected_tab)
 
 # ─── Routes: New Sale ──────────────────────────────────────────────────────────
 @app.route("/new-sale", methods=["GET", "POST"])
@@ -303,8 +355,9 @@ def new_sale():
         ]
         sheets_ok = False
         if sheets:
+            current_tab = get_current_month_tab()
             sheets_ok = sheets_append(sheets, SALES_SHEET_ID,
-                                       "รายชื่อลูกค้า!A:A", [sale_row])
+                                       f"{current_tab}!A:A", [sale_row])
 
         # 3. Save to local DB
         log = SaleLog(
