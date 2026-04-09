@@ -1,11 +1,20 @@
 {% extends "base.html" %}
 {% block ptitle %}Overview{% endblock %}
 {% block content %}
+{% if tabs %}
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+  <span style="font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">ยอดขาย:</span>
+  {% for tab in tabs %}
+  <a href="{{ url_for('dashboard', month=tab) }}" style="padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;border:1px solid;transition:.15s;{% if tab == selected_tab %}background:var(--blue);color:#fff;border-color:var(--blue);{% else %}background:var(--surface);color:var(--t2);border-color:var(--border);{% endif %}">{{ tab }}</a>
+  {% endfor %}
+  <a href="{{ url_for('dashboard', month='all') }}" style="padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;border:1px solid;transition:.15s;{% if selected_tab == 'all' %}background:var(--blue);color:#fff;border-color:var(--blue);{% else %}background:var(--surface);color:var(--t2);border-color:var(--border);{% endif %}">ยอดรวมทั้งหมด</a>
+</div>
+{% endif %}
 <div class="kgrid">
   <div class="kcard"><div class="klabel">สินค้าทั้งหมด</div><div class="kval">{{ total }}</div><div class="ksub">SKU ในระบบ</div></div>
   <div class="kcard kg"><div class="klabel">In Stock</div><div class="kval">{{ instock }}</div><div class="ksub">{{ "%.0f"|format(instock/total*100 if total else 0) }}% ของทั้งหมด</div></div>
   <div class="kcard kr"><div class="klabel">Sold Out</div><div class="kval">{{ sold }}</div><div class="ksub">ขายออกไปแล้ว</div></div>
-  <div class="kcard kb"><div class="klabel">ยอดขาย (Sheets)</div><div class="kval">{{ "{:,.0f}".format(sales_total) }}</div><div class="ksub">บาท</div></div>
+  <div class="kcard kb"><div class="klabel">ยอดขาย{% if selected_tab == 'all' %} (รวมทั้งหมด){% elif selected_tab %} ({{ selected_tab }}){% endif %}</div><div class="kval">{{ "{:,.0f}".format(sales_total) }}</div><div class="ksub">บาท</div></div>
 </div>
 <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
   <div class="card">
@@ -24,7 +33,7 @@
   </div>
 </div>
 <div class="card">
-  <div class="ch"><span class="ct">รายการขายล่าสุด</span><a href="{{ url_for("new_sale") }}" class="btn btn-p btn-sm">+ เพิ่มรายการ</a></div>
+  <div class="ch"><span class="ct">รายการขายล่าสุด</span><a href="{{ url_for('new_sale') }}" class="btn btn-p btn-sm">+ เพิ่มรายการ</a></div>
   <div style="overflow-x:auto">
     {% if recent_sales %}
     <table class="dt"><thead><tr><th>วันที่</th><th>SKU</th><th>สินค้า</th><th>ลูกค้า</th><th>ราคา</th><th>กำไร</th><th>ช่องทาง</th><th>พนักงาน</th><th>สลิป</th></tr></thead>
@@ -39,7 +48,7 @@
       <td style="font-size:12px">{{ s.staff.name or s.staff.username if s.staff else "-" }}</td>
       <td>{% if s.slip_url %}<a href="{{ s.slip_url }}" target="_blank" style="color:var(--blue);font-size:12px">ดูสลิป</a>{% else %}<span style="color:var(--t3)">—</span>{% endif %}</td>
     </tr>{% endfor %}</tbody></table>
-    {% else %}<div style="padding:40px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for("new_sale") }}" style="color:var(--blue)">บันทึกรายการแรก</a></div>{% endif %}
+    {% else %}<div style="padding:40px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for('new_sale') }}" style="color:var(--blue)">บันทึกรายการแรก</a></div>{% endif %}
   </div>
 </div>
 {% endblock %}
