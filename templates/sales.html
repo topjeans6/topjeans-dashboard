@@ -12,7 +12,7 @@
 {% endif %}
 {% set total_sales = namespace(val=0) %}
 {% set total_items = namespace(val=0) %}
-{% for r in rows %}{% if r|length > 13 and r[13] %}{% set total_sales.val = total_sales.val + (r[13]|replace(',','')|float) %}{% endif %}{% set total_items.val = total_items.val + 1 %}{% endfor %}
+{% for r in rows %}{% if r|length > 12 and r[12] %}{% set total_sales.val = total_sales.val + (r[12]|replace(',','')|float) %}{% endif %}{% set total_items.val = total_items.val + 1 %}{% endfor %}
 <div class="kgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
   <div class="kcard"><div class="klabel">รายการทั้งหมด</div><div class="kval">{{ total_items.val }}</div><div class="ksub">{{ selected_tab or 'เดือนนี้' }}</div></div>
   <div class="kcard kb"><div class="klabel">ยอดขายรวม</div><div class="kval">{{ "{:,.0f}".format(total_sales.val) }}</div><div class="ksub">บาท</div></div>
@@ -28,13 +28,12 @@
   <td>{% set ch = r[2] if r|length > 2 else '' %}{% if ch %}<span class="badge {% if 'facebook' in ch|lower or 'fb' in ch|lower %}bb{% elif 'shopee' in ch|lower %}ba{% elif 'tiktok' in ch|lower %}br{% elif 'line' in ch|lower %}bg{% else %}bgr{% endif %}">{{ ch }}</span>{% else %}-{% endif %}</td>
   <td style="font-weight:500">{{ r[3] if r|length > 3 else '-' }}</td>
   <td style="color:var(--t2)">{{ r[4] if r|length > 4 else '-' }}</td>
-  <td>{{ r[7] if r|length > 7 else '-' }}</td>
-  <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--t2)">{{ r[8] if r|length > 8 else '-' }}</td>
-  <td style="text-align:right;font-weight:600">{% if r|length > 13 and r[13] %}{{ "{:,.0f}".format(r[13]|replace(',','')|float) }}{% else %}-{% endif %}</td>
+  <td>{{ r[8] if r|length > 8 else '-' }}</td>
+  <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--t2)">{{ r[9] if r|length > 9 else '-' }}</td>
+  <td style="text-align:right;font-weight:600">{% if r|length > 12 and r[12] %}{{ "{:,.0f}".format(r[12]|replace(',','')|float) }}{% else %}-{% endif %}</td>
   </tr>{% endfor %}</tbody></table></div>
   {% else %}
-  <div style="padding:48px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for('new_sale') }}" style="color:var(--blue)">บันทึกรายการแรก</a></div
-</div>
-{% endif %}
+  <div style="padding:48px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for('new_sale') }}" style="color:var(--blue)">บันทึกรายการแรก</a></div>
+  {% endif %}
 </div>
 {% endblock %}
