@@ -29,7 +29,7 @@ if database_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "uploads"
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -42,18 +42,17 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
-INVENTORY_SHEET_ID  = os.getenv("INVENTORY_SHEET_ID",  "1Vzcs4mUnOKk0VwkouBq3m87fdO3xAV7F9na88PVsS0o")
-SALES_SHEET_ID      = os.getenv("SALES_SHEET_ID",      "11iPX3SHK-vt6DlN1rJeUXjXsFeHwSFXXCPNFc-AM4kA")
-DRIVE_FOLDER_ID     = os.getenv("DRIVE_FOLDER_ID",     "")  # ใส่ ID โฟลเดอร์ Drive สำหรับเก็บสลิป
+INVENTORY_SHEET_ID = os.getenv("INVENTORY_SHEET_ID", "1Vzcs4mUnOKk0VwkouBq3m87fdO3xAV7F9na88PVsS0o")
+SALES_SHEET_ID = os.getenv("SALES_SHEET_ID", "11iPX3SHK-vt6DlN1rJeUXjXsFeHwSFXXCPNFc-AM4kA")
+DRIVE_FOLDER_ID = os.getenv("DRIVE_FOLDER_ID", "")
 SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE", "credentials.json")
 
 def get_google_services():
-    """Build Google Sheets + Drive clients from service account."""
     try:
         creds = service_account.Credentials.from_service_account_file(
             SERVICE_ACCOUNT_FILE, scopes=SCOPES)
         sheets = build("sheets", "v4", credentials=creds)
-        drive  = build("drive",  "v3", credentials=creds)
+        drive = build("drive", "v3", credentials=creds)
         return sheets, drive
     except Exception as e:
         print(f"[Google API] {e}")
@@ -61,28 +60,28 @@ def get_google_services():
 
 # ─── DB Models ─────────────────────────────────────────────────────────────────
 class User(UserMixin, db.Model):
-    id       = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role     = db.Column(db.String(20), default="staff")   # admin / staff
-    name     = db.Column(db.String(100), default="")
+    role = db.Column(db.String(20), default="staff")
+    name = db.Column(db.String(100), default="")
 
 class SaleLog(db.Model):
-    id           = db.Column(db.Integer, primary_key=True)
-    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
-    staff_id     = db.Column(db.Integer, db.ForeignKey("user.id"))
-    sku          = db.Column(db.String(30))
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    staff_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    sku = db.Column(db.String(30))
     product_name = db.Column(db.String(200))
-    customer     = db.Column(db.String(100))
-    phone        = db.Column(db.String(30))
-    price        = db.Column(db.Float)
-    cost         = db.Column(db.Float)
-    channel      = db.Column(db.String(50))
-    slip_url     = db.Column(db.String(500))
+    customer = db.Column(db.String(100))
+    phone = db.Column(db.String(30))
+    price = db.Column(db.Float)
+    cost = db.Column(db.Float)
+    channel = db.Column(db.String(50))
+    slip_url = db.Column(db.String(500))
     slip_drive_id = db.Column(db.String(200))
-    notes        = db.Column(db.Text)
-    sheet_row    = db.Column(db.Integer)
-    staff        = db.relationship("User", backref="sales")
+    notes = db.Column(db.Text)
+    sheet_row = db.Column(db.Integer)
+    staff = db.relationship("User", backref="sales")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -121,19 +120,16 @@ def sheets_update(service, sheet_id, range_, values):
         return False
 
 def get_sales_sheet_tabs(service):
-    """ดึงรายชื่อ tab ทั้งหมดจาก Sales Sheet ที่ชื่อเป็น Month Year เช่น March 2026"""
     try:
         meta = service.spreadsheets().get(spreadsheetId=SALES_SHEET_ID).execute()
         tabs = [s["properties"]["title"] for s in meta.get("sheets", [])]
-        # กรองเฉพาะ tab ที่ชื่อเป็น Month Year
         import calendar
-        months = list(calendar.month_name)[1:]  # ['January', ..., 'December']
+        months = list(calendar.month_name)[1:]
         result = []
         for tab in tabs:
             parts = tab.strip().split(" ")
             if len(parts) == 2 and parts[0] in months and parts[1].isdigit():
                 result.append(tab)
-        # เรียงตามวันที่ล่าสุดก่อน
         def sort_key(t):
             parts = t.split(" ")
             return (int(parts[1]), months.index(parts[0]))
@@ -144,13 +140,10 @@ def get_sales_sheet_tabs(service):
         return []
 
 def get_current_month_tab():
-    """ชื่อ tab เดือนปัจจุบัน เช่น April 2026"""
-    from datetime import datetime
     now = datetime.now()
     return now.strftime("%B %Y")
 
 def get_sales_rows(service, tab=None):
-    """ดึงข้อมูลยอดขายจาก tab ที่ระบุ หรือเดือนปัจจุบัน"""
     if not tab:
         tab = get_current_month_tab()
     return sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
@@ -161,7 +154,8 @@ def get_all_sales_rows(service):
     for tab in tabs:
         rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
         all_rows.extend(rows)
-   return all_rows
+    return all_rows
+
 def get_net_profit(service, tab):
     try:
         res = service.spreadsheets().values().get(
@@ -171,33 +165,27 @@ def get_net_profit(service, tab):
         return float(str(val).replace(",", ""))
     except:
         return 0
+
 def get_all_net_profit(service):
     tabs = get_sales_sheet_tabs(service)
     return sum(get_net_profit(service, tab) for tab in tabs)
 
 def get_sales_total(service, tab):
-    """ยอดขายรวมของ tab นั้น อ่านจากคอลัมน์ L (index 11)"""
     rows = get_sales_rows(service, tab)
     total = 0
     for r in rows:
         if len(r) > 11 and r[11]:
-            try: total += float(str(r[11]).replace(",", ""))
-            except: pass
+            try:
+                total += float(str(r[11]).replace(",", ""))
+            except:
+                pass
     return total
 
 def get_all_sales_total(service):
     tabs = get_sales_sheet_tabs(service)
     return sum(get_sales_total(service, tab) for tab in tabs)
-    """ดึงข้อมูลยอดขายจากทุก tab รวมกัน"""
-    tabs = get_sales_sheet_tabs(service)
-    all_rows = []
-    for tab in tabs:
-        rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
-        all_rows.extend(rows)
-    return all_rows
 
 def find_sku_row(service, sku):
-    """Return (row_index_1based, row_data) or (None, None)."""
     rows = sheets_get(service, INVENTORY_SHEET_ID, "Inventory!A:AK")
     for i, row in enumerate(rows):
         if row and row[0] == sku:
@@ -205,7 +193,6 @@ def find_sku_row(service, sku):
     return None, None
 
 def deduct_stock(service, sku):
-    """Mark SKU as Sold Out in Inventory sheet."""
     row_num, row_data = find_sku_row(service, sku)
     if row_num is None:
         return False
@@ -214,7 +201,6 @@ def deduct_stock(service, sku):
     return True
 
 def upload_slip_to_drive(drive_service, file_bytes, filename, mime_type):
-    """Upload slip image to Google Drive and return (file_id, web_link)."""
     try:
         meta = {"name": filename}
         if DRIVE_FOLDER_ID:
@@ -275,14 +261,16 @@ def dashboard():
                 sales_total = get_sales_total(sheets, selected_tab)
                 net_profit = get_net_profit(sheets, selected_tab)
 
-    total   = sum(1 for r in inv_rows if len(r) > 1 and r[1])
+    total = sum(1 for r in inv_rows if len(r) > 1 and r[1])
     instock = sum(1 for r in inv_rows if len(r) > 1 and r[1] == "in Stock")
-    sold    = sum(1 for r in inv_rows if len(r) > 1 and r[1] == "Sold Out")
+    sold = sum(1 for r in inv_rows if len(r) > 1 and r[1] == "Sold Out")
     cost_total = 0
     for r in inv_rows:
         if len(r) > 15 and r[15]:
-            try: cost_total += float(str(r[15]).replace(",",""))
-            except: pass
+            try:
+                cost_total += float(str(r[15]).replace(",", ""))
+            except:
+                pass
 
     recent_sales = SaleLog.query.order_by(SaleLog.created_at.desc()).limit(10).all()
     brand_count = {}
@@ -298,6 +286,7 @@ def dashboard():
         inv_rows=inv_rows[:50], google_ok=sheets is not None,
         tabs=tabs, selected_tab=selected_tab,
         net_profit=net_profit)
+
 # ─── Routes: Inventory ─────────────────────────────────────────────────────────
 @app.route("/inventory")
 @login_required
@@ -306,16 +295,16 @@ def inventory():
     rows = []
     if sheets:
         rows = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:AK")
-    q      = request.args.get("q", "").lower()
+    q = request.args.get("q", "").lower()
     status = request.args.get("status", "")
-    brand  = request.args.get("brand", "")
+    brand = request.args.get("brand", "")
     if q:
         rows = [r for r in rows if any(q in str(c).lower() for c in r)]
     if status:
-        rows = [r for r in rows if len(r)>1 and r[1]==status]
+        rows = [r for r in rows if len(r) > 1 and r[1] == status]
     if brand:
-        rows = [r for r in rows if len(r)>2 and r[2]==brand]
-    brands = sorted(set(r[2] for r in rows if len(r)>2 and r[2]))
+        rows = [r for r in rows if len(r) > 2 and r[2] == brand]
+    brands = sorted(set(r[2] for r in rows if len(r) > 2 and r[2]))
     return render_template("inventory.html", rows=rows, brands=brands,
                            q=q, status=status, brand=brand,
                            google_ok=sheets is not None)
@@ -331,7 +320,7 @@ def sales():
     if sheets:
         tabs = get_sales_sheet_tabs(sheets)
         if not selected_tab and tabs:
-            selected_tab = tabs[0]  # default = เดือนล่าสุด
+            selected_tab = tabs[0]
         if selected_tab:
             rows = get_sales_rows(sheets, selected_tab)
     local_sales = SaleLog.query.order_by(SaleLog.created_at.desc()).all()
@@ -347,42 +336,38 @@ def new_sale():
     inventory_items = []
     if sheets:
         raw = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:AK")
-        inventory_items = [r for r in raw if len(r)>1 and r[1]=="in Stock"]
+        inventory_items = [r for r in raw if len(r) > 1 and r[1] == "in Stock"]
 
     if request.method == "POST":
-        sku          = request.form.get("sku", "").strip()
+        sku = request.form.get("sku", "").strip()
         product_name = request.form.get("product_name", "")
-        customer     = request.form.get("customer", "")
-        phone        = request.form.get("phone", "")
-        price        = float(request.form.get("price", 0) or 0)
-        cost         = float(request.form.get("cost", 0) or 0)
-        channel      = request.form.get("channel", "")
-        notes        = request.form.get("notes", "")
-        slip_url     = ""
+        customer = request.form.get("customer", "")
+        phone = request.form.get("phone", "")
+        price = float(request.form.get("price", 0) or 0)
+        cost = float(request.form.get("cost", 0) or 0)
+        channel = request.form.get("channel", "")
+        notes = request.form.get("notes", "")
+        slip_url = ""
         slip_drive_id = ""
 
-        # Handle slip upload
         slip_file = request.files.get("slip")
         if slip_file and slip_file.filename:
             file_bytes = slip_file.read()
-            mime_type  = slip_file.mimetype or "image/jpeg"
-            safe_name  = f"slip_{sku}_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(slip_file.filename)[1]}"
+            mime_type = slip_file.mimetype or "image/jpeg"
+            safe_name = f"slip_{sku}_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(slip_file.filename)[1]}"
             if drive:
                 slip_drive_id, slip_url = upload_slip_to_drive(
                     drive, file_bytes, safe_name, mime_type)
-            # Also save locally as fallback
             local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
             with open(local_path, "wb") as f:
                 f.write(file_bytes)
             if not slip_url:
                 slip_url = url_for("uploaded_file", filename=safe_name, _external=True)
 
-        # 1. Deduct stock in Inventory Sheet
         stock_ok = False
         if sheets and sku:
             stock_ok = deduct_stock(sheets, sku)
 
-        # 2. Append to Sales Sheet
         now_str = datetime.now().strftime("%d/%m/%Y")
         sale_row = [
             now_str, current_user.name or current_user.username,
@@ -396,9 +381,8 @@ def new_sale():
         if sheets:
             current_tab = get_current_month_tab()
             sheets_ok = sheets_append(sheets, SALES_SHEET_ID,
-                                       f"{current_tab}!A:A", [sale_row])
+                                      f"{current_tab}!A:A", [sale_row])
 
-        # 3. Save to local DB
         log = SaleLog(
             staff_id=current_user.id, sku=sku,
             product_name=product_name, customer=customer,
@@ -408,8 +392,10 @@ def new_sale():
         db.session.commit()
 
         msg = f"บันทึกการขาย {sku} เรียบร้อย"
-        if stock_ok: msg += " · ตัดสต๊อกแล้ว"
-        if sheets_ok: msg += " · บันทึกใน Google Sheets แล้ว"
+        if stock_ok:
+            msg += " · ตัดสต๊อกแล้ว"
+        if sheets_ok:
+            msg += " · บันทึกใน Google Sheets แล้ว"
         flash(msg, "success")
         return redirect(url_for("sales"))
 
@@ -426,10 +412,10 @@ def sku_info(sku):
     _, row = find_sku_row(sheets, sku)
     if not row:
         return jsonify({"error": "ไม่พบ SKU"})
-    headers = ["SKU","สถานะ","Brand","รุ่น","Tab","Color","Made in",
-               "Botton Code","ผลิต-ปี","ทรงกางเกง","เนื้อผ้า","ขนาด",
-               "ตำหนิ","สภาพ","วันที่รับ","ต้นทุน/ชิ้น","ทุนรวม","กำไรรวม",
-               "Instock","ขาย/ชิ้น","สต๊อกคงเหลือ","ช่องทางขาย","Link-ภาพสินค้า"]
+    headers = ["SKU", "สถานะ", "Brand", "รุ่น", "Tab", "Color", "Made in",
+               "Botton Code", "ผลิต-ปี", "ทรงกางเกง", "เนื้อผ้า", "ขนาด",
+               "ตำหนิ", "สภาพ", "วันที่รับ", "ต้นทุน/ชิ้น", "ทุนรวม", "กำไรรวม",
+               "Instock", "ขาย/ชิ้น", "สต๊อกคงเหลือ", "ช่องทางขาย", "Link-ภาพสินค้า"]
     data = {headers[i]: row[i] if i < len(row) else "" for i in range(len(headers))}
     return jsonify(data)
 
@@ -440,14 +426,14 @@ def inventory_stats():
     if not sheets:
         return jsonify({"error": "no google"})
     rows = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:V")
-    instock = sum(1 for r in rows if len(r)>1 and r[1]=="in Stock")
-    soldout = sum(1 for r in rows if len(r)>1 and r[1]=="Sold Out")
+    instock = sum(1 for r in rows if len(r) > 1 and r[1] == "in Stock")
+    soldout = sum(1 for r in rows if len(r) > 1 and r[1] == "Sold Out")
     brands = {}
     for r in rows:
-        if len(r)>2 and r[1]=="in Stock":
+        if len(r) > 2 and r[1] == "in Stock":
             b = r[2] or "Other"
-            brands[b] = brands.get(b,0)+1
-    return jsonify({"instock":instock,"soldout":soldout,"brands":brands})
+            brands[b] = brands.get(b, 0) + 1
+    return jsonify({"instock": instock, "soldout": soldout, "brands": brands})
 
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
@@ -467,8 +453,8 @@ def admin_users():
             if not User.query.filter_by(username=uname).first():
                 u = User(username=uname,
                          password=generate_password_hash(request.form["password"]),
-                         role=request.form.get("role","staff"),
-                         name=request.form.get("name",""))
+                         role=request.form.get("role", "staff"),
+                         name=request.form.get("name", ""))
                 db.session.add(u)
                 db.session.commit()
                 flash(f"สร้าง account '{uname}' แล้ว", "success")
@@ -495,8 +481,7 @@ def init_db():
             db.session.commit()
             print("✅ Created default admin: admin / topjeans2024")
 
-    init_db()
+init_db()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
