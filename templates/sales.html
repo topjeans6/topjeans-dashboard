@@ -1,25 +1,53 @@
-{% extends "base.html" %}
-{% block ptitle %}รายการขาย{% endblock %}
-{% block content %}
-<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
-  <span style="font-size:13px;color:var(--t2)">{{ local_sales|length }} รายการในระบบ</span>
-  <a href="{{ url_for("new_sale") }}" class="btn btn-p btn-sm" style="margin-left:auto">+ บันทึกการขาย</a>
-</div>
-<div class="card" style="margin-bottom:16px"><div style="overflow-x:auto">
-{% if local_sales %}
-<table class="dt"><thead><tr><th>วันที่</th><th>SKU</th><th>สินค้า</th><th>ลูกค้า</th><th>เบอร์</th><th>ราคา</th><th>ต้นทุน</th><th>กำไร</th><th>ช่องทาง</th><th>พนักงาน</th><th>สลิป</th></tr></thead>
-<tbody>{% for s in local_sales %}<tr>
-  <td style="font-size:12px;color:var(--t2)">{{ s.created_at.strftime("%d/%m/%y %H:%M") }}</td>
-  <td style="font-family:'IBM Plex Mono',monospace;font-size:11px">{{ s.sku }}</td>
-  <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.product_name }}</td>
-  <td>{{ s.customer }}</td>
-  <td style="font-size:12px">{{ s.phone }}</td>
-  <td style="font-weight:500">{{ "{:,.0f}".format(s.price) }}</td>
-  <td style="font-size:12px;color:var(--t2)">{{ "{:,.0f}".format(s.cost) }}</td>
-  <td style="font-weight:500;color:{% if s.price-s.cost>=0 %}var(--green){% else %}var(--red){% endif %}">{{ "{:,.0f}".format(s.price-s.cost) }}</td>
-  <td><span class="badge bb" style="font-size:10px">{{ s.channel }}</span></td>
-  <td style="font-size:12px">{{ s.staff.name or s.staff.username if s.staff else "—" }}</td>
-  <td>{% if s.slip_url %}<a href="{{ s.slip_url }}" target="_blank" style="color:var(--blue);font-size:12px">ดูสลิป</a>{% else %}<span style="color:var(--t3)">—</span>{% endif %}</td>
-</tr>{% endfor %}</tbody></table>
-{% else %}<div style="padding:40px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for("new_sale") }}" style="color:var(--blue)">บันทึกรายการแรก</a></div>{% endif %}
-</div></div>{% endblock %}
+Top Jeans
+Business Dashboard
+หลัก
+Overview สินค้าคงคลัง รายการขาย
+ดำเนินการ
+บันทึกการขาย {% if current_user.role == 'admin' %}
+Admin
+จัดการทีมงาน {% endif %}
+{{ current_user.name[0] if current_user.name else current_user.username[0] }}
+{{ current_user.name or current_user.username }}
+{{ current_user.role }}
+{% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for cat, msg in messages %}
+{{ msg }}
+{% endfor %} {% endif %} {% endwith %}
+รายการขาย
+ข้อมูลจาก Google Sheets
+{% if google_ok %} Google เชื่อมต่อแล้ว {% else %} ยังไม่เชื่อมต่อ Google {% endif %} + บันทึกการขาย
+{% if tabs %}
+เลือกเดือน:
+{% for tab in tabs %} {{ tab }} {% endfor %}
+{% endif %} {% set total_sales = namespace(val=0) %} {% set total_items = namespace(val=0) %} {% for r in rows %} {% if r|length > 13 and r[13] %} {% set total_sales.val = total_sales.val + (r[13]|replace(',','')|float) %} {% endif %} {% set total_items.val = total_items.val + 1 %} {% endfor %}
+รายการทั้งหมด
+{{ total_items.val }}
+{{ selected_tab or 'เดือนนี้' }}
+ยอดขายรวม
+{{ "{:,.0f}".format(total_sales.val) }}
+บาท
+ราคาเฉลี่ย/ชิ้น
+{{ "{:,.0f}".format(total_sales.val / total_items.val) if total_items.val > 0 else 0 }}
+บาท
+รายการขาย {% if selected_tab %}{{ selected_tab }}{% endif %}
+{{ rows|length }} รายการ
+{% if rows %}
+{% for r in rows %} {% endfor %}
+วันที่
+พนักงาน
+ช่องทาง
+ชื่อลูกค้า
+เบอร์โทร
+สินค้า
+SKU
+ราคา (บาท)
+{{ r[0] if r|length > 0 else '-' }}
+{{ r[1] if r|length > 1 else '-' }}
+{% set ch = r[2] if r|length > 2 else '' %} {% if ch %} {{ ch }} {% else %}-{% endif %}
+{{ r[3] if r|length > 3 else '-' }}
+{{ r[4] if r|length > 4 else '-' }}
+{{ r[7] if r|length > 7 else '-' }}
+{{ r[8] if r|length > 8 else '-' }}
+{% if r|length > 13 and r[13] %} {{ "{:,.0f}".format(r[13]|replace(',','')|float) }} {% else %}-{% endif %}
+{% else %}
+ยังไม่มีรายการ — บันทึกรายการแรก
+{% endif %}
