@@ -156,7 +156,7 @@ def get_net_profit(service, tab):
     try:
         res = service.spreadsheets().values().get(
             spreadsheetId=SALES_SHEET_ID,
-            range=f"{tab}!AX2").execute()
+            range=f"{tab}!AY2").execute()
         val = res.get("values", [[0]])[0][0]
         return float(str(val).replace(",", ""))
     except:
