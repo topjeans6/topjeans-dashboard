@@ -155,7 +155,13 @@ def get_sales_rows(service, tab=None):
         tab = get_current_month_tab()
     return sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
 
-def get_all_sales_rows(service):def get_net_profit(service, tab):
+def get_all_sales_rows(service):
+    tabs = get_sales_sheet_tabs(service)
+    all_rows = []
+    for tab in tabs:
+        rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
+        all_rows.extend(rows)
+    return all_rows
     try:
         res = service.spreadsheets().values().get(
             spreadsheetId=SALES_SHEET_ID,
