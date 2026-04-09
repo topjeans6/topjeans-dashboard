@@ -1,53 +1,36 @@
-Top Jeans
-Business Dashboard
-หลัก
-Overview สินค้าคงคลัง รายการขาย
-ดำเนินการ
-บันทึกการขาย {% if current_user.role == 'admin' %}
-Admin
-จัดการทีมงาน {% endif %}
-{{ current_user.name[0] if current_user.name else current_user.username[0] }}
-{{ current_user.name or current_user.username }}
-{{ current_user.role }}
-{% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for cat, msg in messages %}
-{{ msg }}
-{% endfor %} {% endif %} {% endwith %}
-รายการขาย
-ข้อมูลจาก Google Sheets
-{% if google_ok %} Google เชื่อมต่อแล้ว {% else %} ยังไม่เชื่อมต่อ Google {% endif %} + บันทึกการขาย
+{% extends "base.html" %}
+{% block title %}รายการขาย – Top Jeans{% endblock %}
+{% block ptitle %}รายการขาย{% endblock %}
+{% block content %}
 {% if tabs %}
-เลือกเดือน:
-{% for tab in tabs %} {{ tab }} {% endfor %}
-{% endif %} {% set total_sales = namespace(val=0) %} {% set total_items = namespace(val=0) %} {% for r in rows %} {% if r|length > 13 and r[13] %} {% set total_sales.val = total_sales.val + (r[13]|replace(',','')|float) %} {% endif %} {% set total_items.val = total_items.val + 1 %} {% endfor %}
-รายการทั้งหมด
-{{ total_items.val }}
-{{ selected_tab or 'เดือนนี้' }}
-ยอดขายรวม
-{{ "{:,.0f}".format(total_sales.val) }}
-บาท
-ราคาเฉลี่ย/ชิ้น
-{{ "{:,.0f}".format(total_sales.val / total_items.val) if total_items.val > 0 else 0 }}
-บาท
-รายการขาย {% if selected_tab %}{{ selected_tab }}{% endif %}
-{{ rows|length }} รายการ
-{% if rows %}
-{% for r in rows %} {% endfor %}
-วันที่
-พนักงาน
-ช่องทาง
-ชื่อลูกค้า
-เบอร์โทร
-สินค้า
-SKU
-ราคา (บาท)
-{{ r[0] if r|length > 0 else '-' }}
-{{ r[1] if r|length > 1 else '-' }}
-{% set ch = r[2] if r|length > 2 else '' %} {% if ch %} {{ ch }} {% else %}-{% endif %}
-{{ r[3] if r|length > 3 else '-' }}
-{{ r[4] if r|length > 4 else '-' }}
-{{ r[7] if r|length > 7 else '-' }}
-{{ r[8] if r|length > 8 else '-' }}
-{% if r|length > 13 and r[13] %} {{ "{:,.0f}".format(r[13]|replace(',','')|float) }} {% else %}-{% endif %}
-{% else %}
-ยังไม่มีรายการ — บันทึกรายการแรก
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+  <span style="font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">เลือกเดือน:</span>
+  {% for tab in tabs %}
+  <a href="{{ url_for('sales', month=tab) }}" style="padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;border:1px solid;transition:.15s;{% if tab == selected_tab %}background:var(--blue);color:#fff;border-color:var(--blue);{% else %}background:var(--surface);color:var(--t2);border-color:var(--border);{% endif %}">{{ tab }}</a>
+  {% endfor %}
+</div>
 {% endif %}
+{% set total_sales = namespace(val=0) %}
+{% set total_items = namespace(val=0) %}
+{% for r in rows %}{% if r|length > 13 and r[13] %}{% set total_sales.val = total_sales.val + (r[13]|replace(',','')|float) %}{% endif %}{% set total_items.val = total_items.val + 1 %}{% endfor %}
+<div class="kgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+  <div class="kcard"><div class="klabel">รายการทั้งหมด</div><div class="kval">{{ total_items.val }}</div><div class="ksub">{{ selected_tab or 'เดือนนี้' }}</div></div>
+  <div class="kcard kb"><div class="klabel">ยอดขายรวม</div><div class="kval">{{ "{:,.0f}".format(total_sales.val) }}</div><div class="ksub">บาท</div></div>
+  <div class="kcard kg"><div class="klabel">ราคาเฉลี่ย/ชิ้น</div><div class="kval">{{ "{:,.0f}".format(total_sales.val / total_items.val) if total_items.val > 0 else 0 }}</div><div class="ksub">บาท</div></div>
+</div>
+<div class="card">
+  <div class="ch"><span class="ct">รายการขาย {% if selected_tab %}<span style="color:var(--blue)">{{ selected_tab }}</span>{% endif %}</span><span style="font-size:12px;color:var(--t3)">{{ rows|length }} รายการ</span></div>
+  {% if rows %}
+  <div style="overflow-x:auto"><table class="dt"><thead><tr><th>วันที่</th><th>พนักงาน</th><th>ช่องทาง</th><th>ชื่อลูกค้า</th><th>เบอร์โทร</th><th>สินค้า</th><th>SKU</th><th style="text-align:right">ราคา (บาท)</th></tr></thead>
+  <tbody>{% for r in rows %}<tr>
+  <td>{{ r[0] if r|length > 0 else '-' }}</td>
+  <td>{{ r[1] if r|length > 1 else '-' }}</td>
+  <td>{% set ch = r[2] if r|length > 2 else '' %}{% if ch %}<span class="badge {% if 'facebook' in ch|lower or 'fb' in ch|lower %}bb{% elif 'shopee' in ch|lower %}ba{% elif 'tiktok' in ch|lower %}br{% elif 'line' in ch|lower %}bg{% else %}bgr{% endif %}">{{ ch }}</span>{% else %}-{% endif %}</td>
+  <td style="font-weight:500">{{ r[3] if r|length > 3 else '-' }}</td>
+  <td style="color:var(--t2)">{{ r[4] if r|length > 4 else '-' }}</td>
+  <td>{{ r[7] if r|length > 7 else '-' }}</td>
+  <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--t2)">{{ r[8] if r|length > 8 else '-' }}</td>
+  <td style="text-align:right;font-weight:600">{% if r|length > 13 and r[13] %}{{ "{:,.0f}".format(r[13]|replace(',','')|float) }}{% else %}-{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+  {% else %}
+  <div style="padding:48px;text-align:center;color:var(--t3)">ยังไม่มีรายการ — <a href="{{ url_for('new_sale') }}" style="color:var(--blue)">บันทึกรายการแรก</a></div
