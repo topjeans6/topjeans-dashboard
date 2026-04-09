@@ -20,7 +20,6 @@ from googleapiclient.http import MediaIoBaseUpload
 
 load_dotenv()
 
-# ─── App Config ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "topjeans-secret-2024-change-me")
 database_url = os.getenv("DATABASE_URL", "sqlite:///topjeans.db")
@@ -37,7 +36,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# ─── Google API Config ─────────────────────────────────────────────────────────
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -58,7 +56,6 @@ def get_google_services():
         print(f"[Google API] {e}")
         return None, None
 
-# ─── DB Models ─────────────────────────────────────────────────────────────────
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -87,7 +84,6 @@ class SaleLog(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ─── Google Sheets Helpers ─────────────────────────────────────────────────────
 def sheets_get(service, sheet_id, range_):
     try:
         res = service.spreadsheets().values().get(
@@ -174,9 +170,9 @@ def get_sales_total(service, tab):
     rows = get_sales_rows(service, tab)
     total = 0
     for r in rows:
-        if len(r) > 11 and r[11]:
+        if len(r) > 12 and r[12]:
             try:
-                total += float(str(r[11]).replace(",", ""))
+                total += float(str(r[12]).replace(",", ""))
             except:
                 pass
     return total
@@ -216,7 +212,6 @@ def upload_slip_to_drive(drive_service, file_bytes, filename, mime_type):
         print(f"[Drive Upload] {e}")
         return None, None
 
-# ─── Routes: Auth ──────────────────────────────────────────────────────────────
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -235,7 +230,6 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-# ─── Routes: Dashboard ─────────────────────────────────────────────────────────
 @app.route("/")
 @login_required
 def dashboard():
@@ -287,7 +281,6 @@ def dashboard():
         tabs=tabs, selected_tab=selected_tab,
         net_profit=net_profit)
 
-# ─── Routes: Inventory ─────────────────────────────────────────────────────────
 @app.route("/inventory")
 @login_required
 def inventory():
@@ -309,7 +302,6 @@ def inventory():
                            q=q, status=status, brand=brand,
                            google_ok=sheets is not None)
 
-# ─── Routes: Sales ─────────────────────────────────────────────────────────────
 @app.route("/sales")
 @login_required
 def sales():
@@ -328,7 +320,6 @@ def sales():
                            google_ok=sheets is not None,
                            tabs=tabs, selected_tab=selected_tab)
 
-# ─── Routes: New Sale ──────────────────────────────────────────────────────────
 @app.route("/new-sale", methods=["GET", "POST"])
 @login_required
 def new_sale():
@@ -371,8 +362,8 @@ def new_sale():
         now_str = datetime.now().strftime("%d/%m/%Y")
         sale_row = [
             now_str, current_user.name or current_user.username,
-            channel, customer, phone, "", "", product_name,
-            sku, slip_url, "1", str(int(price)), "",
+            channel, customer, phone, "", "", "", product_name,
+            sku, "", "1", str(int(price)), "",
             str(int(price)), now_str, slip_url, "โอน/COD",
             "", "", "", "", now_str, "", str(int(cost)),
             str(int(price - cost)), "", "ส่งแล้ว", "", "", channel
@@ -402,7 +393,6 @@ def new_sale():
     return render_template("new_sale.html", inventory_items=inventory_items,
                            google_ok=sheets is not None)
 
-# ─── Routes: API ──────────────────────────────────────────────────────────────
 @app.route("/api/sku-info/<sku>")
 @login_required
 def sku_info(sku):
@@ -439,7 +429,6 @@ def inventory_stats():
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
-# ─── Routes: Admin ────────────────────────────────────────────────────────────
 @app.route("/admin/users", methods=["GET", "POST"])
 @login_required
 def admin_users():
@@ -469,7 +458,6 @@ def admin_users():
     users = User.query.all()
     return render_template("admin_users.html", users=users)
 
-# ─── Init ─────────────────────────────────────────────────────────────────────
 def init_db():
     with app.app_context():
         db.create_all()
