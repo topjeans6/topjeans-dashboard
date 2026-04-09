@@ -18,7 +18,17 @@
         </div>
         <div class="fg">
           <label class="fl">Platform (ช่องทางออนไลน์) *</label>
-          <input class="fc" type="text" name="platform" placeholder="Facebook, Shopee, TikTok..." required>
+          <select class="fc" name="platform" required>
+            <option value="">-- เลือก Platform --</option>
+            <option>Facebook</option>
+            <option>Line</option>
+            <option>IG</option>
+            <option>Tiktok</option>
+            <option>X</option>
+            <option>Threads</option>
+            <option>Shopee</option>
+            <option>LAZADA</option>
+          </select>
         </div>
         <div class="fg">
           <label class="fl">ชื่อ-สกุล *</label>
@@ -76,10 +86,6 @@
     <div class="ch"><span class="ct">ข้อมูลสินค้า</span></div>
     <div class="cb">
       <div class="fgrid">
-        <div class="fg">
-          <label class="fl">สินค้า *</label>
-          <input class="fc" type="text" name="product_name" required>
-        </div>
         <div class="fg">
           <label class="fl">SKU * (10 ตัวอักษร)</label>
           <input class="fc" type="text" name="sku" maxlength="10" minlength="10" required>
