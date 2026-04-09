@@ -223,42 +223,44 @@ def logout():
 def dashboard():
     sheets, drive = get_google_services()
     inv_rows, sales_rows = [], []
+    tabs = []
+    selected_tab = request.args.get("month", "")
     if sheets:
-        inv_rows   = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:AK")
-        sales_rows = get_all_sales_rows(sheets)
-
-    # KPI
-    total  = sum(1 for r in inv_rows if len(r) > 1 and r[1])
+        inv_rows = sheets_get(sheets, INVENTORY_SHEET_ID, "Inventory!A2:AK")
+        tabs = get_sales_sheet_tabs(sheets)
+        if selected_tab == "all":
+            sales_rows = get_all_sales_rows(sheets)
+        elif selected_tab and selected_tab in tabs:
+            sales_rows = get_sales_rows(sheets, selected_tab)
+        else:
+            if tabs:
+                selected_tab = tabs[0]
+                sales_rows = get_sales_rows(sheets, selected_tab)
+    total   = sum(1 for r in inv_rows if len(r) > 1 and r[1])
     instock = sum(1 for r in inv_rows if len(r) > 1 and r[1] == "in Stock")
-    sold   = sum(1 for r in inv_rows if len(r) > 1 and r[1] == "Sold Out")
-
+    sold    = sum(1 for r in inv_rows if len(r) > 1 and r[1] == "Sold Out")
     cost_total = 0
     for r in inv_rows:
         if len(r) > 15 and r[15]:
             try: cost_total += float(str(r[15]).replace(",",""))
             except: pass
-
     sales_total = 0
     for r in sales_rows:
         if len(r) > 13 and r[13]:
             try: sales_total += float(str(r[13]).replace(",",""))
             except: pass
-
     recent_sales = SaleLog.query.order_by(SaleLog.created_at.desc()).limit(10).all()
-
-    # Brand distribution
     brand_count = {}
     for r in inv_rows:
         if len(r) > 2 and r[1] == "in Stock":
             b = r[2] if r[2] else "Other"
             brand_count[b] = brand_count.get(b, 0) + 1
-
     return render_template("dashboard.html",
         total=total, instock=instock, sold=sold,
         cost_total=cost_total, sales_total=sales_total,
         recent_sales=recent_sales, brand_count=brand_count,
-        inv_rows=inv_rows[:50], google_ok=sheets is not None)
-
+        inv_rows=inv_rows[:50], google_ok=sheets is not None,
+        tabs=tabs, selected_tab=selected_tab)
 # ─── Routes: Inventory ─────────────────────────────────────────────────────────
 @app.route("/inventory")
 @login_required
