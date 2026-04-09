@@ -10,13 +10,14 @@
   <a href="{{ url_for('dashboard', month='all') }}" style="padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;border:1px solid;transition:.15s;{% if selected_tab == 'all' %}background:var(--blue);color:#fff;border-color:var(--blue);{% else %}background:var(--surface);color:var(--t2);border-color:var(--border);{% endif %}">ยอดรวมทั้งหมด</a>
 </div>
 {% endif %}
-<div class="kgrid">
+<div class="kgrid" style="grid-template-columns:repeat(5,1fr)">
   <div class="kcard"><div class="klabel">สินค้าทั้งหมด</div><div class="kval">{{ total }}</div><div class="ksub">SKU ในระบบ</div></div>
   <div class="kcard kg"><div class="klabel">In Stock</div><div class="kval">{{ instock }}</div><div class="ksub">{{ "%.0f"|format(instock/total*100 if total else 0) }}% ของทั้งหมด</div></div>
   <div class="kcard kr"><div class="klabel">Sold Out</div><div class="kval">{{ sold }}</div><div class="ksub">ขายออกไปแล้ว</div></div>
-  <div class="kcard kb"><div class="klabel">ยอดขาย{% if selected_tab == 'all' %} (รวมทั้งหมด){% elif selected_tab %} ({{ selected_tab }}){% endif %}</div><div class="kval">{{ "{:,.0f}".format(sales_total) }}</div><div class="ksub">บาท</div></div>
+  <div class="kcard kb"><div class="klabel">ยอดขาย ({{ selected_tab if selected_tab != 'all' else 'รวมทั้งหมด' }})</div><div class="kval">{{ "{:,.0f}".format(sales_total) }}</div><div class="ksub">บาท</div></div>
+  <div class="kcard kg"><div class="klabel">Net Profit ({{ selected_tab if selected_tab != 'all' else 'รวมทั้งหมด' }})</div><div class="kval">{{ "{:,.0f}".format(net_profit) }}</div><div class="ksub">บาท</div></div>
 </div>
-<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px;margin-top:16px">
   <div class="card">
     <div class="ch"><span class="ct">Brand Distribution</span></div>
     <div class="cb"><div style="position:relative;height:220px"><canvas id="bc" role="img" aria-label="brand chart"></canvas></div></div>
