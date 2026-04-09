@@ -161,7 +161,8 @@ def get_all_sales_rows(service):
     for tab in tabs:
         rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A2:AZ")
         all_rows.extend(rows)
-    return all_rows
+   return all_rows
+def get_net_profit(service, tab):
     try:
         res = service.spreadsheets().values().get(
             spreadsheetId=SALES_SHEET_ID,
@@ -170,7 +171,6 @@ def get_all_sales_rows(service):
         return float(str(val).replace(",", ""))
     except:
         return 0
-
 def get_all_net_profit(service):
     tabs = get_sales_sheet_tabs(service)
     return sum(get_net_profit(service, tab) for tab in tabs)
