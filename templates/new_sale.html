@@ -1,108 +1,206 @@
 {% extends "base.html" %}
+{% block title %}บันทึกการขาย – Top Jeans{% endblock %}
 {% block ptitle %}บันทึกการขาย{% endblock %}
 {% block content %}
-<div style="max-width:680px">
-<div class="card"><div class="ch"><span class="ct">รายการขายใหม่</span></div><div class="cb">
 <form method="POST" enctype="multipart/form-data">
-  <div class="fg"><label class="fl">เลือก SKU *</label>
-    <select name="sku" id="ss" class="fc" required onchange="onSku(this.value)">
-      <option value="">— เลือก SKU —</option>
-      {% for r in inventory_items %}{% if r|length>3 %}
-      <option value="{{ r[0] }}" data-brand="{{ r[2] }}" data-model="{{ r[3] }}" data-style="{{ r[9] if r|length>9 else "" }}" data-fabric="{{ r[10] if r|length>10 else "" }}" data-size="{{ r[11] if r|length>11 else "" }}" data-cond="{{ r[13] if r|length>13 else "" }}" data-cost="{{ r[15] if r|length>15 else "" }}" data-price="{{ r[19] if r|length>19 else "" }}" data-img="{{ r[22] if r|length>22 else "" }}">
-        {{ r[0] }} — {{ r[2] }} {{ r[3] }} {% if r|length>11 %}({{ r[11][:12] }}){% endif %}
-      </option>{% endif %}{% endfor %}
-    </select>
-  </div>
-  <div id="pi" style="display:none;margin-bottom:18px;padding:14px;background:var(--bb);border:1px solid #bfdbfe;border-radius:var(--rs);font-size:13px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px">
-      <div><span style="color:var(--t3)">Brand:</span> <strong id="pi-b"></strong></div>
-      <div><span style="color:var(--t3)">รุ่น:</span> <strong id="pi-m"></strong></div>
-      <div><span style="color:var(--t3)">ทรง:</span> <span id="pi-s"></span></div>
-      <div><span style="color:var(--t3)">ขนาด:</span> <span id="pi-sz"></span></div>
-      <div><span style="color:var(--t3)">เนื้อผ้า:</span> <span id="pi-f"></span></div>
-      <div><span style="color:var(--t3)">สภาพ:</span> <span id="pi-c"></span></div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">ข้อมูลลูกค้า</span></div>
+    <div class="cb">
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">วันที่สั่งซื้อ *</label>
+          <input class="fc" type="text" name="order_date" placeholder="01/01/2026" pattern="[\d/\-]+" required>
+        </div>
+        <div class="fg">
+          <label class="fl">Username ลูกค้า *</label>
+          <input class="fc" type="text" name="username" required>
+        </div>
+        <div class="fg">
+          <label class="fl">Platform (ช่องทางออนไลน์) *</label>
+          <input class="fc" type="text" name="platform" placeholder="Facebook, Shopee, TikTok..." required>
+        </div>
+        <div class="fg">
+          <label class="fl">ชื่อ-สกุล *</label>
+          <input class="fc" type="text" name="customer" required>
+        </div>
+        <div class="fg">
+          <label class="fl">เบอร์โทร *</label>
+          <input class="fc" type="tel" name="phone" pattern="[0-9]+" required>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">ที่อยู่ *</label>
+        <input class="fc" type="text" name="address" required>
+      </div>
+      <div class="fg">
+        <label class="fl">จังหวัด *</label>
+        <select class="fc" name="province" required>
+          <option value="">-- เลือกจังหวัด --</option>
+          <option>กรุงเทพมหานคร</option><option>กระบี่</option><option>กาญจนบุรี</option>
+          <option>กาฬสินธุ์</option><option>กำแพงเพชร</option><option>ขอนแก่น</option>
+          <option>จันทบุรี</option><option>ฉะเชิงเทรา</option><option>ชลบุรี</option>
+          <option>ชัยนาท</option><option>ชัยภูมิ</option><option>ชุมพร</option>
+          <option>เชียงราย</option><option>เชียงใหม่</option><option>ตรัง</option>
+          <option>ตราด</option><option>ตาก</option><option>นครนายก</option>
+          <option>นครปฐม</option><option>นครพนม</option><option>นครราชสีมา</option>
+          <option>นครศรีธรรมราช</option><option>นครสวรรค์</option><option>นนทบุรี</option>
+          <option>นราธิวาส</option><option>น่าน</option><option>บึงกาฬ</option>
+          <option>บุรีรัมย์</option><option>ปทุมธานี</option><option>ประจวบคีรีขันธ์</option>
+          <option>ปราจีนบุรี</option><option>ปัตตานี</option><option>พระนครศรีอยุธยา</option>
+          <option>พะเยา</option><option>พังงา</option><option>พัทลุง</option>
+          <option>พิจิตร</option><option>พิษณุโลก</option><option>เพชรบุรี</option>
+          <option>เพชรบูรณ์</option><option>แพร่</option><option>ภูเก็ต</option>
+          <option>มหาสารคาม</option><option>มุกดาหาร</option><option>แม่ฮ่องสอน</option>
+          <option>ยโสธร</option><option>ยะลา</option><option>ร้อยเอ็ด</option>
+          <option>ระนอง</option><option>ระยอง</option><option>ราชบุรี</option>
+          <option>ลพบุรี</option><option>ลำปาง</option><option>ลำพูน</option>
+          <option>เลย</option><option>ศรีสะเกษ</option><option>สกลนคร</option>
+          <option>สงขลา</option><option>สตูล</option><option>สมุทรปราการ</option>
+          <option>สมุทรสงคราม</option><option>สมุทรสาคร</option><option>สระแก้ว</option>
+          <option>สระบุรี</option><option>สิงห์บุรี</option><option>สุโขทัย</option>
+          <option>สุพรรณบุรี</option><option>สุราษฎร์ธานี</option><option>สุรินทร์</option>
+          <option>หนองคาย</option><option>หนองบัวลำภู</option><option>อ่างทอง</option>
+          <option>อำนาจเจริญ</option><option>อุดรธานี</option><option>อุตรดิตถ์</option>
+          <option>อุทัยธานี</option><option>อุบลราชธานี</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">รหัสไปรษณีย์ *</label>
+        <input class="fc" type="text" name="postcode" pattern="[0-9]{5}" maxlength="5" required>
+      </div>
     </div>
   </div>
-  <input type="hidden" name="product_name" id="pni">
-  <div class="fgrid">
-    <div class="fg"><label class="fl">ราคาขาย (บาท) *</label><input type="number" name="price" id="pri" class="fc" placeholder="0" required min="0" oninput="calc()"></div>
-    <div class="fg"><label class="fl">ต้นทุน (บาท)</label><input type="number" name="cost" id="coi" class="fc" placeholder="0" min="0" oninput="calc()"></div>
-  </div>
-  <div id="pb" style="display:none;margin:-8px 0 18px;padding:10px 14px;background:var(--gb);border:1px solid #bbf7d0;border-radius:var(--rs);font-size:13px;gap:24px">
-    กำไร: <strong id="pv" style="color:var(--green)">0 บาท</strong> &nbsp; Margin: <strong id="mv" style="color:var(--green)">0%</strong>
-  </div>
-  <div class="fgrid">
-    <div class="fg"><label class="fl">ชื่อลูกค้า *</label><input type="text" name="customer" class="fc" placeholder="ชื่อ-นามสกุล" required></div>
-    <div class="fg"><label class="fl">เบอร์โทรศัพท์</label><input type="tel" name="phone" class="fc" placeholder="08x-xxx-xxxx"></div>
-  </div>
-  <div class="fg"><label class="fl">ช่องทาง *</label>
-    <select name="channel" class="fc" required>
-      <option value="">— เลือกช่องทาง —</option>
-      <option>Marketplace - Bell</option><option>Marketplace - Putcharaporn Netnong</option>
-      <option>Marketplace - Topjeans VTG</option><option>Facebook</option>
-      <option>Facebook Page</option><option>Instagram</option>
-      <option>Shopee</option><option>LAZADA</option><option>TikTok</option>
-      <option>Line my Shop</option><option>Walk-in</option><option>อื่นๆ</option>
-    </select>
-  </div>
-  <div class="fg"><label class="fl">แนบสลิปการโอนเงิน</label>
-    <div id="dz" style="border:2px dashed var(--b2);border-radius:var(--rs);padding:28px;text-align:center;cursor:pointer;background:var(--s2)" onclick="document.getElementById('sf').click()" ondragover="event.preventDefault();this.style.borderColor='var(--blue)'" ondragleave="this.style.borderColor='var(--b2)'" ondrop="drop(event)">
-      <div style="font-size:13px;color:var(--t2)">คลิกหรือลากไฟล์มาวาง</div>
-      <div style="font-size:11px;color:var(--t3);margin-top:4px">PNG, JPG ไม่เกิน 16MB</div>
-      <input type="file" name="slip" id="sf" accept="image/*" style="display:none" onchange="prev(this)">
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">ข้อมูลสินค้า</span></div>
+    <div class="cb">
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">สินค้า *</label>
+          <input class="fc" type="text" name="product_name" required>
+        </div>
+        <div class="fg">
+          <label class="fl">SKU * (10 ตัวอักษร)</label>
+          <input class="fc" type="text" name="sku" maxlength="10" minlength="10" required>
+        </div>
+        <div class="fg">
+          <label class="fl">Link (ช่องทางขาย)</label>
+          <input class="fc" type="url" name="link" placeholder="https://...">
+        </div>
+        <div class="fg">
+          <label class="fl">จำนวน/ชิ้น *</label>
+          <input class="fc" type="number" name="quantity" min="1" value="1" required>
+        </div>
+        <div class="fg">
+          <label class="fl">ราคาปกติ *</label>
+          <input class="fc" type="number" name="price_normal" min="0" required>
+        </div>
+        <div class="fg">
+          <label class="fl">ราคาลด *</label>
+          <input class="fc" type="number" name="price_discount" min="0" required>
+        </div>
+        <div class="fg">
+          <label class="fl">ยอดโอนเต็ม *</label>
+          <input class="fc" type="number" name="price_transfer" min="0" required>
+        </div>
+        <div class="fg">
+          <label class="fl">วันที่ชำระ *</label>
+          <input class="fc" type="text" name="payment_date" placeholder="01/01/2026" pattern="[\d/\-]+" required>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">ช่องทางที่ขายได้</label>
+        <select class="fc" name="sale_channel">
+          <option value="">-- เลือกช่องทาง --</option>
+          <option>Marketplace - Bell</option>
+          <option>Marketplace - TopjeansVTG</option>
+          <option>Page-Facebook</option>
+          <option>Reel - Facebook</option>
+          <option>IG</option>
+          <option>Tiktok</option>
+          <option>Shopee</option>
+          <option>Line OA</option>
+          <option>Line Shopping</option>
+        </select>
+      </div>
     </div>
-    <div id="sp" style="display:none;margin-top:10px;align-items:center;gap:10px">
-      <img id="si" src="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
-      <div><div id="sn" style="font-size:13px;font-weight:500"></div><div id="ss2" style="font-size:11px;color:var(--t3);margin-top:2px"></div>
-      <button type="button" onclick="clr()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">ลบสลิป</button></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">ข้อมูลการชำระเงิน</span></div>
+    <div class="cb">
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">รูปแบบชำระ *</label>
+          <select class="fc" name="payment_method" id="payment_method" onchange="toggleCOD()">
+            <option value="โอนชำระ">โอนชำระ</option>
+            <option value="COD">COD</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">แนบสลิป (หลักฐานการโอน) *</label>
+          <input class="fc" type="file" name="slip" accept="image/*" required>
+        </div>
+      </div>
+      <div id="cod_fields" style="display:none">
+        <div class="fgrid">
+          <div class="fg">
+            <label class="fl">รับค่าบริการ COD</label>
+            <input class="fc" type="number" name="cod_fee" min="0" value="0">
+          </div>
+          <div class="fg">
+            <label class="fl">มัดจำ</label>
+            <input class="fc" type="number" name="cod_deposit" min="0" value="0">
+          </div>
+          <div class="fg">
+            <label class="fl">วันที่รับเงิน COD</label>
+            <input class="fc" type="text" name="cod_date" placeholder="01/01/2026" pattern="[\d/\-]+">
+          </div>
+          <div class="fg">
+            <label class="fl">จำนวนเงิน COD</label>
+            <input class="fc" type="number" name="cod_amount" min="0" value="0">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="fg"><label class="fl">หมายเหตุ</label><textarea name="notes" class="fc" rows="2" placeholder="ตำหนิ, ขนาดพิเศษ..."></textarea></div>
-  <div style="display:flex;gap:10px;padding-top:8px">
-    <button type="submit" class="btn btn-ok" style="flex:1">บันทึกการขาย + ตัดสต๊อก</button>
-    <a href="{{ url_for("sales") }}" class="btn btn-s">ยกเลิก</a>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">รูปภาพและสถานะ</span></div>
+    <div class="cb">
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">ภาพสินค้า *</label>
+          <input class="fc" type="file" name="product_image" accept="image/*" required>
+        </div>
+        <div class="fg">
+          <label class="fl">สถานะการส่ง</label>
+          <select class="fc" name="shipping_status">
+            <option value="เตรียมส่ง">เตรียมส่ง</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">หมายเหตุ</label>
+        <textarea class="fc" name="notes" rows="3" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
+      </div>
+    </div>
   </div>
+
+  <div style="display:flex;gap:10px">
+    <button type="submit" class="btn btn-ok" style="flex:1;padding:12px;font-size:15px">💾 บันทึกการขาย + ตัดสต๊อก</button>
+    <a href="{{ url_for('sales') }}" class="btn btn-s">ยกเลิก</a>
+  </div>
+
 </form>
-</div></div></div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-function onSku(v){
-  const o=document.getElementById("ss").options[document.getElementById("ss").selectedIndex];
-  if(!v){document.getElementById("pi").style.display="none";return}
-  document.getElementById("pi-b").textContent=o.dataset.brand||"—";
-  document.getElementById("pi-m").textContent=o.dataset.model||"—";
-  document.getElementById("pi-s").textContent=o.dataset.style||"—";
-  document.getElementById("pi-sz").textContent=o.dataset.size||"—";
-  document.getElementById("pi-f").textContent=o.dataset.fabric||"—";
-  document.getElementById("pi-c").textContent=o.dataset.cond||"—";
-  document.getElementById("pi").style.display="block";
-  document.getElementById("pni").value=(o.dataset.brand+" "+o.dataset.model+" "+o.dataset.size).trim();
-  document.getElementById("pri").value=o.dataset.price||"";
-  document.getElementById("coi").value=o.dataset.cost||"";
-  calc();
+function toggleCOD() {
+  const method = document.getElementById('payment_method').value;
+  document.getElementById('cod_fields').style.display = method === 'COD' ? 'block' : 'none';
 }
-function calc(){
-  const p=parseFloat(document.getElementById("pri").value)||0;
-  const c=parseFloat(document.getElementById("coi").value)||0;
-  const pr=p-c;
-  document.getElementById("pv").textContent=pr.toLocaleString("th-TH")+" บาท";
-  document.getElementById("pv").style.color=pr>=0?"var(--green)":"var(--red)";
-  document.getElementById("mv").textContent=p>0?(pr/p*100).toFixed(1)+"%":"0%";
-  document.getElementById("pb").style.display="flex";
-}
-function prev(i){
-  if(!i.files[0])return;
-  const f=i.files[0];
-  const r=new FileReader();
-  r.onload=e=>{
-    document.getElementById("si").src=e.target.result;
-    document.getElementById("sn").textContent=f.name;
-    document.getElementById("ss2").textContent=(f.size/1024).toFixed(0)+" KB";
-    document.getElementById("sp").style.display="flex";
-    document.getElementById("dz").style.borderColor="var(--green)";
-  };r.readAsDataURL(f);
-}
-function clr(){document.getElementById("sf").value="";document.getElementById("sp").style.display="none";document.getElementById("dz").style.borderColor="var(--b2)";}
-function drop(e){e.preventDefault();document.getElementById("dz").style.borderColor="var(--b2)";const f=e.dataTransfer.files[0];if(!f||!f.type.startsWith("image/"))return;const dt=new DataTransfer();dt.items.add(f);const i=document.getElementById("sf");i.files=dt.files;prev(i);}
-</script>{% endblock %}
+</script>
+{% endblock %}
