@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}รับเงิน COD – Top Jeans{% endblock %}
+{% block ptitle %}รับเงิน COD{% endblock %}
+{% block content %}
+
+{% if items %}
+<div class="card" style="margin-bottom:16px">
+  <div class="ch">
+    <span class="ct">รายการรอรับเงิน COD</span>
+    <span style="font-size:12px;color:var(--t3)">{{ items|length }} รายการ</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>ชื่อลูกค้า</th>
+          <th>เบอร์โทร</th>
+          <th>จังหวัด</th>
+          <th>บริษัทขนส่ง</th>
+          <th>เลขพัสดุ</th>
+          <th>เดือน</th>
+          <th>ดำเนินการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ item.row[9] if item.row|length > 9 else '-' }}</td>
+          <td style="font-weight:500">{{ item.row[3] if item.row|length > 3 else '-' }}</td>
+          <td style="color:var(--t2)">{{ item.row[4] if item.row|length > 4 else '-' }}</td>
+          <td>{{ item.row[6] if item.row|length > 6 else '-' }}</td>
+          <td>{{ item.row[28] if item.row|length > 28 else '-' }}</td>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ item.row[29] if item.row|length > 29 else '-' }}</td>
+          <td><span class="badge bb" style="font-size:10px">{{ item.tab }}</span></td>
+          <td>
+            <button class="btn btn-ok btn-sm" onclick="openModal('{{ item.tab }}','{{ item.row_num }}','{{ item.row[9] if item.row|length > 9 else "" }}','{{ item.row[3] if item.row|length > 3 else "" }}')">
+              รับเงิน COD
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div style="padding:48px;text-align:center;color:var(--t3)">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.4"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    ไม่มีรายการรอรับเงิน COD
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--rl);padding:28px;width:100%;max-width:420px;margin:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-size:15px;font-weight:600">บันทึกการรับเงิน COD</h3>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px">×</button>
+    </div>
+    <div id="modal-info" style="font-size:13px;color:var(--t2);margin-bottom:16px;padding:10px 14px;background:var(--s2);border-radius:var(--rs)"></div>
+    <form method="POST">
+      <input type="hidden" name="tab" id="f-tab">
+      <input type="hidden" name="row_num" id="f-row">
+      <div class="fg">
+        <label class="fl">วันที่รับเงิน COD *</label>
+        <input class="fc" type="text" name="cod_date" placeholder="01/01/2026" pattern="[\d/\-]+" required>
+      </div>
+      <div class="fg">
+        <label class="fl">จำนวนเงิน COD *</label>
+        <input class="fc" type="number" name="cod_amount" min="0" value="0" required>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-ok" style="flex:1">💰 บันทึกรับเงิน COD</button>
+        <button type="button" onclick="closeModal()" class="btn btn-s">ยกเลิก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(tab, rowNum, sku, customer) {
+  document.getElementById('f-tab').value = tab;
+  document.getElementById('f-row').value = rowNum;
+  document.getElementById('modal-info').textContent = 'SKU: ' + sku + ' | ลูกค้า: ' + customer;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+</script>
+{% endblock %}
