@@ -188,13 +188,37 @@ def find_sku_row(service, sku):
             return i + 1, row
     return None, None
 
+def get_cost_from_inventory(service, sku):
+    """ดึงต้นทุน/ชิ้น จาก Inventory คอลัมน์ P (index 15)"""
+    row_num, row = find_sku_row(service, sku)
+    if row and len(row) > 15 and row[15]:
+        try:
+            return str(row[15])
+        except:
+            pass
+    return ""
+
 def find_sales_row_by_sku(service, tab, sku):
-    """หา row ใน Sales Sheet จาก SKU"""
+    """หา row ใน Sales Sheet จาก SKU (คอลัมน์ J = index 9)"""
     rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A:AZ")
     for i, row in enumerate(rows):
         if len(row) > 9 and row[9] == sku:
             return i + 1, row
     return None, None
+
+def find_sales_rows_by_status(service, status="เตรียมส่ง"):
+    """หา rows ที่มีสถานะตามที่ระบุจากทุก tab"""
+    tabs = get_sales_sheet_tabs(service)
+    results = []
+    for tab in tabs:
+        rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!A:AZ")
+        for i, row in enumerate(rows):
+            if i == 0:
+                continue
+            # AB = index 27 = สถานะการส่ง
+            if len(row) > 27 and row[27] == status:
+                results.append({"tab": tab, "row_num": i + 1, "row": row})
+    return results
 
 def deduct_stock(service, sku):
     row_num, row_data = find_sku_row(service, sku)
@@ -367,6 +391,11 @@ def new_sale():
         slip_drive_id = ""
         product_image_url = ""
 
+        # ดึงต้นทุนจาก Inventory คอลัมน์ P
+        cost_per_item = ""
+        if sheets and sku:
+            cost_per_item = get_cost_from_inventory(sheets, sku)
+
         # อัพโหลดสลิป
         slip_file = request.files.get("slip")
         if slip_file and slip_file.filename:
@@ -400,14 +429,13 @@ def new_sale():
         if sheets and sku:
             stock_ok = deduct_stock(sheets, sku)
 
-        # บันทึกลง Sheet
         # A=วันที่สั่งซื้อ B=Username C=Platform D=ชื่อสกุล E=เบอร์โทร
         # F=ที่อยู่ G=จังหวัด H=รหัสไปรษณีย์ I=สินค้า J=SKU
         # K=Link L=จำนวน M=ราคาปกติ N=ราคาลด O=ยอดโอนเต็ม
         # P=วันที่ชำระ Q=สลิป R=รูปแบบชำระ S=รับค่าบริการCOD
         # T=มัดจำ U=วันที่รับเงินCOD V=จำนวนเงินCOD
-        # W=วันที่ส่ง(ว่าง) X=ค่าส่ง(ว่าง) Y=ดัดทุน(ว่าง) Z=กำไร(ว่าง)
-        # AA=ค่าส่ง AB=สถานะการส่ง AC=บริษัทขนส่ง(ว่าง) AD=เลขพัสดุ(ว่าง)
+        # W=วันที่ส่ง X=ค่าส่ง Y=ต้นทุน/ชิ้น Z=กำไร
+        # AA=ว่าง AB=สถานะการส่ง AC=บริษัทขนส่ง AD=เลขพัสดุ
         # AE=ช่องทางที่ขายได้ AF=ภาพสินค้า
         sale_row = [
             order_date, username, platform, customer, phone,
@@ -415,7 +443,7 @@ def new_sale():
             link, quantity, price_normal, price_discount, price_transfer,
             payment_date, slip_url, payment_method, cod_fee,
             cod_deposit, cod_date, cod_amount,
-            "", "", "", "",
+            "", "", cost_per_item, "",
             "", shipping_status, "", "",
             sale_channel, product_image_url
         ]
@@ -426,15 +454,18 @@ def new_sale():
             sheets_ok = sheets_append(sheets, SALES_SHEET_ID,
                                       f"{current_tab}!A:A", [sale_row])
 
-        # บันทึกลง DB
         try:
             price = float(price_normal)
         except:
             price = 0
+        try:
+            cost = float(cost_per_item)
+        except:
+            cost = 0
         log = SaleLog(
             staff_id=current_user.id, sku=sku,
             product_name=product_name, customer=customer,
-            phone=phone, price=price, cost=0, channel=platform,
+            phone=phone, price=price, cost=cost, channel=platform,
             slip_url=slip_url, slip_drive_id=slip_drive_id, notes=notes)
         db.session.add(log)
         db.session.commit()
@@ -448,6 +479,70 @@ def new_sale():
         return redirect(url_for("sales"))
 
     return render_template("new_sale.html", inventory_items=inventory_items,
+                           google_ok=sheets is not None)
+
+# ─── Routes: สถานะการจัดส่ง ───────────────────────────────────────────────────
+@app.route("/shipping", methods=["GET", "POST"])
+@login_required
+def shipping():
+    sheets, _ = get_google_services()
+    items = []
+    if sheets:
+        items = find_sales_rows_by_status(sheets, "เตรียมส่ง")
+
+    if request.method == "POST":
+        tab        = request.form.get("tab", "")
+        row_num    = request.form.get("row_num", "")
+        ship_date  = request.form.get("ship_date", "")
+        carrier    = request.form.get("carrier", "")
+        tracking   = request.form.get("tracking", "")
+        ship_cost  = request.form.get("ship_cost", "0")
+
+        if sheets and tab and row_num:
+            row_num = int(row_num)
+            # W=วันที่ส่ง X=ค่าส่ง AB=สถานะ AC=บริษัทขนส่ง AD=เลขพัสดุ
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!W{row_num}", [[ship_date]])
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!X{row_num}", [[ship_cost]])
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!AB{row_num}", [["ส่งแล้ว"]])
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!AC{row_num}", [[carrier]])
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!AD{row_num}", [[tracking]])
+            flash(f"อัพเดทสถานะการจัดส่งเรียบร้อย", "success")
+            return redirect(url_for("shipping"))
+
+    return render_template("shipping.html", items=items,
+                           google_ok=sheets is not None)
+
+# ─── Routes: รับเงิน COD ──────────────────────────────────────────────────────
+@app.route("/cod", methods=["GET", "POST"])
+@login_required
+def cod():
+    sheets, _ = get_google_services()
+    items = []
+    if sheets:
+        items = find_sales_rows_by_status(sheets, "ส่งแล้ว")
+
+    if request.method == "POST":
+        tab        = request.form.get("tab", "")
+        row_num    = request.form.get("row_num", "")
+        cod_date   = request.form.get("cod_date", "")
+        cod_amount = request.form.get("cod_amount", "0")
+
+        if sheets and tab and row_num:
+            row_num = int(row_num)
+            # U=วันที่รับเงินCOD V=จำนวนเงินCOD
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!U{row_num}", [[cod_date]])
+            sheets_update(sheets, SALES_SHEET_ID,
+                          f"{tab}!V{row_num}", [[cod_amount]])
+            flash("บันทึกการรับเงิน COD เรียบร้อย", "success")
+            return redirect(url_for("cod"))
+
+    return render_template("cod.html", items=items,
                            google_ok=sheets is not None)
 
 @app.route("/api/sku-info/<sku>")
