@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}ค่าใช้จ่ายในการดำเนินงาน – Top Jeans{% endblock %}
+{% block ptitle %}ค่าใช้จ่ายในการดำเนินงาน{% endblock %}
+{% block content %}
+
+{% if items %}
+<div class="card" style="margin-bottom:16px">
+  <div class="ch">
+    <span class="ct">รายการที่ส่งแล้ว</span>
+    <span style="font-size:12px;color:var(--t3)">{{ items|length }} รายการ</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="dt">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>ชื่อลูกค้า</th>
+          <th>จังหวัด</th>
+          <th>บริษัทขนส่ง</th>
+          <th>เลขพัสดุ</th>
+          <th>เดือน</th>
+          <th>ดำเนินการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ item.row[9] if item.row|length > 9 else '-' }}</td>
+          <td style="font-weight:500">{{ item.row[3] if item.row|length > 3 else '-' }}</td>
+          <td>{{ item.row[6] if item.row|length > 6 else '-' }}</td>
+          <td>{{ item.row[28] if item.row|length > 28 else '-' }}</td>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ item.row[29] if item.row|length > 29 else '-' }}</td>
+          <td><span class="badge bb" style="font-size:10px">{{ item.tab }}</span></td>
+          <td>
+            <button class="btn btn-p btn-sm" onclick="openModal('{{ item.tab }}','{{ item.row_num }}','{{ item.row[9] if item.row|length > 9 else "" }}','{{ item.row[3] if item.row|length > 3 else "" }}')">
+              บันทึกค่าใช้จ่าย
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div style="padding:48px;text-align:center;color:var(--t3)">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.4"><path d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3M9 7a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    ไม่มีรายการที่ส่งแล้ว
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--rl);padding:28px;width:100%;max-width:520px;margin:16px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-size:15px;font-weight:600">บันทึกค่าใช้จ่าย</h3>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px">×</button>
+    </div>
+    <div id="modal-info" style="font-size:13px;color:var(--t2);margin-bottom:16px;padding:10px 14px;background:var(--s2);border-radius:var(--rs)"></div>
+    <form method="POST">
+      <input type="hidden" name="tab" id="f-tab">
+      <input type="hidden" name="row_num" id="f-row">
+
+      <div style="padding:12px 16px;background:var(--s2);border-radius:var(--rs);margin-bottom:16px;font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em">ซองพลาสติก</div>
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">ขนาดซองพลาสติก</label>
+          <select class="fc" name="bag_size">
+            <option value="">-- เลือกขนาด --</option>
+            <option>17x30</option>
+            <option>25x35</option>
+            <option>28x42</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">จำนวน</label>
+          <input class="fc" type="number" name="bag_qty" min="0" value="1">
+        </div>
+      </div>
+
+      <div style="padding:12px 16px;background:var(--s2);border-radius:var(--rs);margin-bottom:16px;font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em">ถุงห่อใส</div>
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">ขนาดถุงห่อใส</label>
+          <select class="fc" name="wrap_size">
+            <option value="">-- เลือกขนาด --</option>
+            <option>10x15</option>
+            <option>14x22</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">จำนวน</label>
+          <input class="fc" type="number" name="wrap_qty" min="0" value="1">
+        </div>
+      </div>
+
+      <div style="padding:12px 16px;background:var(--s2);border-radius:var(--rs);margin-bottom:16px;font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em">ใบปะหน้า</div>
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">ขนาดใบปะหน้า</label>
+          <select class="fc" name="label_size">
+            <option value="">-- เลือกขนาด --</option>
+            <option>60x40 cm.</option>
+            <option>10x15 cm.</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">จำนวน</label>
+          <input class="fc" type="number" name="label_qty" min="0" value="1">
+        </div>
+      </div>
+
+      <div style="padding:12px 16px;background:var(--s2);border-radius:var(--rs);margin-bottom:16px;font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em">Sticker-COD</div>
+      <div class="fgrid">
+        <div class="fg">
+          <label class="fl">ขนาด Sticker-COD</label>
+          <select class="fc" name="sticker_size">
+            <option value="">-- เลือกขนาด --</option>
+            <option>6.5x4.5</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">จำนวน</label>
+          <input class="fc" type="number" name="sticker_qty" min="0" value="1">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">ค่าน้ำมันรถ (บาท)</label>
+        <input class="fc" type="number" name="fuel_cost" min="0" value="0">
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-p" style="flex:1">💾 อัพเดทข้อมูล</button>
+        <button type="button" onclick="closeModal()" class="btn btn-s">ยกเลิก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(tab, rowNum, sku, customer) {
+  document.getElementById('f-tab').value = tab;
+  document.getElementById('f-row').value = rowNum;
+  document.getElementById('modal-info').textContent = 'SKU: ' + sku + ' | ลูกค้า: ' + customer;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+</script>
+{% endblock %}
