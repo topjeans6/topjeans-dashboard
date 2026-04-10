@@ -3,11 +3,36 @@
 {% block ptitle %}ค่าใช้จ่ายในการดำเนินงาน{% endblock %}
 {% block content %}
 
+<!-- Filter -->
+<div class="card" style="margin-bottom:16px">
+  <div class="cb">
+    <div class="fgrid">
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">เลือกเดือน</label>
+        <select class="fc" id="filter-month" onchange="filterItems()">
+          <option value="">-- ทุกเดือน --</option>
+          {% set months = [] %}
+          {% for item in items %}
+            {% if item.tab not in months %}
+              {% set _ = months.append(item.tab) %}
+              <option>{{ item.tab }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">กรอก SKU</label>
+        <input class="fc" type="text" id="filter-sku" placeholder="ค้นหา SKU..." oninput="filterItems()">
+      </div>
+    </div>
+  </div>
+</div>
+
 {% if items %}
 <div class="card" style="margin-bottom:16px">
   <div class="ch">
     <span class="ct">รายการที่ส่งแล้ว</span>
-    <span style="font-size:12px;color:var(--t3)">{{ items|length }} รายการ</span>
+    <span style="font-size:12px;color:var(--t3)" id="count-label">{{ items|length }} รายการ</span>
   </div>
   <div style="overflow-x:auto">
     <table class="dt">
@@ -22,9 +47,11 @@
           <th>ดำเนินการ</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="items-tbody">
         {% for item in items %}
-        <tr>
+        <tr class="item-row"
+            data-month="{{ item.tab }}"
+            data-sku="{{ item.row[9] if item.row|length > 9 else '' }}">
           <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ item.row[9] if item.row|length > 9 else '-' }}</td>
           <td style="font-weight:500">{{ item.row[3] if item.row|length > 3 else '-' }}</td>
           <td>{{ item.row[6] if item.row|length > 6 else '-' }}</td>
@@ -144,12 +171,28 @@
 
 {% block scripts %}
 <script>
+function filterItems() {
+  const month = document.getElementById('filter-month').value.toLowerCase();
+  const sku = document.getElementById('filter-sku').value.toLowerCase();
+  const rows = document.querySelectorAll('.item-row');
+  let count = 0;
+  rows.forEach(row => {
+    const rowMonth = row.dataset.month.toLowerCase();
+    const rowSku = row.dataset.sku.toLowerCase();
+    const show = (!month || rowMonth === month) && (!sku || rowSku.includes(sku));
+    row.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  document.getElementById('count-label').textContent = count + ' รายการ';
+}
+
 function openModal(tab, rowNum, sku, customer) {
   document.getElementById('f-tab').value = tab;
   document.getElementById('f-row').value = rowNum;
   document.getElementById('modal-info').textContent = 'SKU: ' + sku + ' | ลูกค้า: ' + customer;
   document.getElementById('modal').style.display = 'flex';
 }
+
 function closeModal() {
   document.getElementById('modal').style.display = 'none';
 }
