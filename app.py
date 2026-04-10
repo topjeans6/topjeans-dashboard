@@ -544,7 +544,44 @@ def cod():
 
     return render_template("cod.html", items=items,
                            google_ok=sheets is not None)
+# ─── Routes: ค่าใช้จ่ายในการดำเนินงาน ────────────────────────────────────────
+@app.route("/expenses", methods=["GET", "POST"])
+@login_required
+def expenses():
+    sheets, _ = get_google_services()
+    items = []
+    if sheets:
+        items = find_sales_rows_by_status(sheets, "ส่งแล้ว")
 
+    if request.method == "POST":
+        tab         = request.form.get("tab", "")
+        row_num     = request.form.get("row_num", "")
+        bag_size    = request.form.get("bag_size", "")
+        bag_qty     = request.form.get("bag_qty", "0")
+        wrap_size   = request.form.get("wrap_size", "")
+        wrap_qty    = request.form.get("wrap_qty", "0")
+        label_size  = request.form.get("label_size", "")
+        label_qty   = request.form.get("label_qty", "0")
+        sticker_size = request.form.get("sticker_size", "")
+        sticker_qty = request.form.get("sticker_qty", "0")
+        fuel_cost   = request.form.get("fuel_cost", "0")
+
+        if sheets and tab and row_num:
+            row_num = int(row_num)
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AJ{row_num}", [[bag_size]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AL{row_num}", [[bag_qty]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AM{row_num}", [[wrap_size]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AO{row_num}", [[wrap_qty]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AP{row_num}", [[label_size]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AR{row_num}", [[label_qty]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AS{row_num}", [[sticker_size]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AU{row_num}", [[sticker_qty]])
+            sheets_update(sheets, SALES_SHEET_ID, f"{tab}!AV{row_num}", [[fuel_cost]])
+            flash("บันทึกค่าใช้จ่ายเรียบร้อย", "success")
+            return redirect(url_for("expenses"))
+
+    return render_template("expenses.html", items=items,
+                           google_ok=sheets is not None)
 @app.route("/api/sku-info/<sku>")
 @login_required
 def sku_info(sku):
