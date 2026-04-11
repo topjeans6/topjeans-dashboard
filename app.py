@@ -398,15 +398,39 @@ def new_sale():
 
         # ── บันทึกลง Sales Sheet ──────────────────────────────────────────────
         sale_row = [
-            order_date, username, platform, customer, phone,
-            address, province, postcode, product_name, sku,
-            link, quantity, price_normal, price_discount, price_transfer,
-            payment_date, slip_url, payment_method, cod_fee,
-            cod_deposit, cod_date, cod_amount,
-            "", "", cost_per_item, "",
-            "", shipping_status, "", "",
-            sale_channel, product_image_url
-        ]
+    order_date,       # A  วันที่สั่งซื้อ
+    username,         # B  ชื่อ User name ลูกค้า
+    platform,         # C  Platform
+    customer,         # D  ชื่อ-สกุล
+    phone,            # E  เบอร์โทร
+    address,          # F  ที่อยู่
+    province,         # G  จังหวัด
+    postcode,         # H  รหัสไปรษณีย์
+    product_name,     # I  สินค้า
+    sku,              # J  SKU
+    link,             # K  Link
+    quantity,         # L  จำนวน/ชิ้น
+    price_normal,     # M  ราคาปกติ
+    price_discount,   # N  ราคาลด
+    price_transfer,   # O  ยอดโอนเต็ม
+    payment_date,     # P  วันที่ชำระ
+    slip_url,         # Q  สลิป (Payment Receipt Link)
+    payment_method,   # R  รูปแบบชำระ
+    cod_fee,          # S  รับค่าบริการ COD
+    cod_deposit,      # T  มัดจำ
+    cod_date,         # U  วันที่รับเงิน COD
+    cod_amount,       # V  จำนวนเงิน COD
+    "",               # W  วันที่ส่ง
+    "",               # X  ค่าส่ง
+    cost_per_item,    # Y  ต้นทุน/ชิ้น
+    "",               # Z  กำไร/ชิ้น
+    "",               # AA ค่า Ads
+    shipping_status,  # AB สถานะการส่ง
+    "",               # AC บริษัทขนส่ง
+    "",               # AD เลขพัสดุ
+    sale_channel,     # AE ช่องทางขาย
+    product_image_url,# AF ภาพสินค้า
+]
         sheets_ok = False
         if sheets:
             sheets_ok = sheets_append(sheets, SALES_SHEET_ID,
