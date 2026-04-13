@@ -366,11 +366,15 @@ def new_sale():
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
         slip_file = request.files.get("slip")
-        if slip_file and slip_file.filename:
-            file_bytes = slip_file.read()
-            mime_type  = slip_file.mimetype or "image/jpeg"
-            ext        = os.path.splitext(slip_file.filename)[1]
-            safe_name  = f"slip_{sku}_{timestamp}{ext}"
+if slip_file and slip_file.filename:
+    from PIL import Image
+    img = Image.open(slip_file)
+    img.thumbnail((1200, 1200))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    file_bytes = buf.getvalue()
+    mime_type  = "image/jpeg"
+    safe_name  = f"slip_{sku}_{timestamp}.jpg"
             if drive:
                 slip_drive_id, slip_url = upload_to_drive(
                     drive, file_bytes, safe_name, mime_type,
@@ -382,11 +386,15 @@ def new_sale():
                 slip_url = url_for("uploaded_file", filename=safe_name, _external=True)
 
         product_image_file = request.files.get("product_image")
-        if product_image_file and product_image_file.filename:
-            file_bytes = product_image_file.read()
-            mime_type  = product_image_file.mimetype or "image/jpeg"
-            ext        = os.path.splitext(product_image_file.filename)[1]
-            safe_name  = f"{sku}{ext}"
+if product_image_file and product_image_file.filename:
+    from PIL import Image
+    img = Image.open(product_image_file)
+    img.thumbnail((800, 800))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=70)
+    file_bytes = buf.getvalue()
+    mime_type  = "image/jpeg"
+    safe_name  = f"{sku}.jpg"
             if drive:
                 _, product_image_url = upload_to_drive(
                     drive, file_bytes, safe_name, mime_type,
