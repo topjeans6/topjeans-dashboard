@@ -2,7 +2,7 @@
 {% block title %}บันทึกการขาย – Top Jeans{% endblock %}
 {% block ptitle %}บันทึกการขาย{% endblock %}
 {% block content %}
-<form method="POST" enctype="multipart/form-data">
+<form id="sale-form" method="POST">
 
   <div class="card" style="margin-bottom:16px">
     <div class="ch"><span class="ct">ข้อมูลลูกค้า</span></div>
@@ -88,7 +88,7 @@
       <div class="fgrid">
         <div class="fg">
           <label class="fl">SKU * (10 ตัวอักษร)</label>
-          <input class="fc" type="text" name="sku" maxlength="10" minlength="10" required>
+          <input class="fc" type="text" id="sku" name="sku" maxlength="10" minlength="10" required>
         </div>
         <div class="fg">
           <label class="fl">Link (ช่องทางขาย)</label>
@@ -145,8 +145,10 @@
           </select>
         </div>
         <div class="fg">
-          <label class="fl">แนบสลิป (หลักฐานการโอน) *</label>
-          <input class="fc" type="file" name="slip" accept="image/*" required>
+          <label class="fl">แนบสลิป (หลักฐานการโอน)</label>
+          <input class="fc" type="file" id="slip_file" accept="image/*">
+          <input type="hidden" name="slip_url" id="slip_url">
+          <small id="slip_status" style="color:#888"></small>
         </div>
       </div>
       <div id="cod_fields" style="display:none">
@@ -177,8 +179,10 @@
     <div class="cb">
       <div class="fgrid">
         <div class="fg">
-          <label class="fl">ภาพสินค้า *</label>
-          <input class="fc" type="file" name="product_image" accept="image/*" required>
+          <label class="fl">ภาพสินค้า</label>
+          <input class="fc" type="file" id="product_image_file" accept="image/*">
+          <input type="hidden" name="product_image_url" id="product_image_url">
+          <small id="product_status" style="color:#888"></small>
         </div>
         <div class="fg">
           <label class="fl">สถานะการส่ง</label>
@@ -194,8 +198,12 @@
     </div>
   </div>
 
+  <div id="upload-progress" style="display:none;margin-bottom:12px;padding:12px;background:#fff3cd;border-radius:8px;text-align:center">
+    ⏳ กำลังอัพโหลดรูปภาพไปยัง Google Drive...
+  </div>
+
   <div style="display:flex;gap:10px">
-    <button type="submit" class="btn btn-ok" style="flex:1;padding:12px;font-size:15px">💾 บันทึกการขาย + ตัดสต๊อก</button>
+    <button type="button" id="submit-btn" onclick="handleSubmit()" class="btn btn-ok" style="flex:1;padding:12px;font-size:15px">💾 บันทึกการขาย + ตัดสต๊อก</button>
     <a href="{{ url_for('sales') }}" class="btn btn-s">ยกเลิก</a>
   </div>
 
@@ -203,10 +211,101 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <script>
+const CLIENT_ID = "{{ google_client_id }}";
+const SLIP_FOLDER_ID = "1oReQhkYf7_RlQE8rMmofcJDUNi2VO0ph";
+const PRODUCT_FOLDER_ID = "1In-evxaRoE4-x0qPB087fNEj_IBbeBIP";
+
+let accessToken = null;
+
 function toggleCOD() {
   const method = document.getElementById('payment_method').value;
   document.getElementById('cod_fields').style.display = method === 'COD' ? 'block' : 'none';
+}
+
+async function getAccessToken() {
+  return new Promise((resolve, reject) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: (response) => {
+        if (response.error) reject(response.error);
+        else resolve(response.access_token);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+async function uploadToDrive(file, filename, folderId, token) {
+  const metadata = {
+    name: filename,
+    parents: [folderId]
+  };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+  form.append('file', file);
+
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form
+  });
+  const data = await res.json();
+  return data.webViewLink || '';
+}
+
+async function handleSubmit() {
+  const slipFile = document.getElementById('slip_file').files[0];
+  const productFile = document.getElementById('product_image_file').files[0];
+  const sku = document.getElementById('sku').value.trim();
+
+  if (!sku) {
+    alert('กรุณาใส่ SKU ก่อนครับ');
+    return;
+  }
+
+  document.getElementById('submit-btn').disabled = true;
+
+  try {
+    if (slipFile || productFile) {
+      document.getElementById('upload-progress').style.display = 'block';
+
+      // ขอ Access Token จาก Google
+      accessToken = await getAccessToken();
+
+      const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
+
+      // อัพโหลดสลิป
+      if (slipFile) {
+        document.getElementById('slip_status').textContent = '⏳ กำลังอัพโหลดสลิป...';
+        const slipUrl = await uploadToDrive(slipFile, `slip_${sku}_${timestamp}.jpg`, SLIP_FOLDER_ID, accessToken);
+        document.getElementById('slip_url').value = slipUrl;
+        document.getElementById('slip_status').textContent = '✅ อัพโหลดสลิปเสร็จแล้ว';
+      }
+
+      // อัพโหลดภาพสินค้า
+      if (productFile) {
+        document.getElementById('product_status').textContent = '⏳ กำลังอัพโหลดภาพสินค้า...';
+        const productUrl = await uploadToDrive(productFile, `${sku}.jpg`, PRODUCT_FOLDER_ID, accessToken);
+        document.getElementById('product_image_url').value = productUrl;
+        document.getElementById('product_status').textContent = '✅ อัพโหลดภาพสินค้าเสร็จแล้ว';
+      }
+
+      document.getElementById('upload-progress').style.display = 'none';
+    }
+
+    // ส่ง Form ไปยัง Flask
+    document.getElementById('sale-form').submit();
+
+  } catch (err) {
+    document.getElementById('upload-progress').style.display = 'none';
+    document.getElementById('submit-btn').disabled = false;
+    alert('เกิดข้อผิดพลาดในการอัพโหลดรูป: ' + err);
+  }
 }
 </script>
 {% endblock %}
