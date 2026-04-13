@@ -450,7 +450,8 @@ slip_drive_id     = ""
         return redirect(url_for("sales"))
 
     return render_template("new_sale.html", inventory_items=inventory_items,
-                           google_ok=sheets is not None)
+                       google_ok=sheets is not None,
+                       google_client_id="530648154117-xxxxxxxxx.apps.googleusercontent.com")
 
 @app.route("/shipping", methods=["GET", "POST"])
 @login_required
