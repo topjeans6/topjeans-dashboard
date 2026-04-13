@@ -146,9 +146,10 @@ def get_all_sales_rows(service):
 
 def get_net_profit(service, tab):
     try:
-        val = service.spreadsheets().values().get(
-            spreadsheetId=SALES_SHEET_ID, range=f"{tab}!AY2").execute()
-        return float(str(val.get("values", [[0]])[0][0]).replace(",", ""))
+        rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!AY2:AY2")
+        if rows and rows[0]:
+            return float(str(rows[0][0]).replace(",", ""))
+        return 0
     except:
         return 0
 
@@ -156,14 +157,18 @@ def get_all_net_profit(service):
     return sum(get_net_profit(service, tab) for tab in get_sales_sheet_tabs(service))
 
 def get_sales_total(service, tab):
-    total = 0
-    for r in get_sales_rows(service, tab):
-        if len(r) > 12 and r[12]:
-            try:
-                total += float(str(r[12]).replace(",", ""))
-            except:
-                pass
-    return total
+    try:
+        rows = sheets_get(service, SALES_SHEET_ID, f"{tab}!M2:M")
+        total = 0
+        for r in rows:
+            if r and r[0]:
+                try:
+                    total += float(str(r[0]).replace(",", ""))
+                except:
+                    pass
+        return total
+    except:
+        return 0
 
 def get_all_sales_total(service):
     return sum(get_sales_total(service, tab) for tab in get_sales_sheet_tabs(service))
@@ -602,9 +607,6 @@ def admin_users():
                 flash("ลบ account แล้ว", "success")
     users = User.query.all()
     return render_template("admin_users.html", users=users)
-
-# ── ลบข้อมูลเทส (ใช้ครั้งเดียวแล้วลบ Route นี้ออก) ──────────────────────────
-
 
 def init_db():
     with app.app_context():
