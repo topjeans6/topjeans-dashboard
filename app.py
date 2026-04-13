@@ -612,7 +612,15 @@ def admin_users():
                 flash("ลบ account แล้ว", "success")
     users = User.query.all()
     return render_template("admin_users.html", users=users)
-
+@app.route("/admin/clear-test-sales")
+@login_required
+def clear_test_sales():
+    if current_user.role != "admin":
+        return "เฉพาะ Admin เท่านั้น"
+    SaleLog.query.delete()
+    db.session.commit()
+    return "✅ ลบข้อมูลทดสอบทั้งหมดเรียบร้อยครับ"
+  
 def init_db():
     with app.app_context():
         db.create_all()
