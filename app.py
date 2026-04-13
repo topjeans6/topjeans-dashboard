@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-from PIL import Image
 
 load_dotenv()
 
@@ -23,7 +22,7 @@ if database_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "uploads"
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # ลดเหลือ 5MB
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -42,6 +41,9 @@ DRIVE_PRODUCT_IMAGE_FOLDER_ID   = os.getenv("DRIVE_PRODUCT_IMAGE_FOLDER_ID",   "
 DRIVE_PAYMENT_RECEIPT_FOLDER_ID = os.getenv("DRIVE_PAYMENT_RECEIPT_FOLDER_ID", "1oReQhkYf7_RlQE8rMmofcJDUNi2VO0ph")
 
 SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE", "credentials.json")
+
+# ใส่ Client ID ใหม่ที่ได้จาก Google Cloud Console ครับ
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "YOUR_NEW_CLIENT_ID.apps.googleusercontent.com")
 
 def get_google_services():
     try:
@@ -202,16 +204,6 @@ def deduct_stock(service, sku):
     sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!B{row_num}", [["Sold Out"]])
     return True
 
-def compress_image(file, max_size=(500, 500), quality=50):
-    """บีบอัดรูปให้เล็กที่สุดเพื่อประหยัด Memory"""
-    img = Image.open(file)
-    img = img.convert("RGB")
-    img.thumbnail(max_size, Image.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=quality, optimize=True)
-    buf.seek(0)
-    return buf.getvalue()
-
 def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
     try:
         meta  = {"name": filename, "parents": [folder_id]}
@@ -367,24 +359,10 @@ def new_sale():
         notes           = request.form.get("notes", "")
 
         # ── รับ URL จาก Browser ที่อัพโหลด Drive แล้ว ──────────────────────
-slip_url          = request.form.get("slip_url", "")
-product_image_url = request.form.get("product_image_url", "")
-slip_drive_id     = ""
-
-        # ── อัพโหลดภาพสินค้า → ภาพปกสินค้าที่ขาย ───────────────────────────
-        product_image_file = request.files.get("product_image")
-        if product_image_file and product_image_file.filename:
-            file_bytes = compress_image(product_image_file, max_size=(500, 500), quality=50)
-            safe_name  = f"{sku}.jpg"
-            if drive:
-                _, product_image_url = upload_to_drive(
-                    drive, file_bytes, safe_name, "image/jpeg",
-                    DRIVE_PRODUCT_IMAGE_FOLDER_ID)
-            if not product_image_url:
-                local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
-                with open(local_path, "wb") as f:
-                    f.write(file_bytes)
-                product_image_url = url_for("uploaded_file", filename=safe_name, _external=True)
+        slip_url          = request.form.get("slip_url", "")
+        product_image_url = request.form.get("product_image_url", "")
+        slip_drive_id     = ""
+        cost_per_item     = get_cost_from_inventory(sheets, sku) if sheets and sku else ""
 
         # ── ตัดสต๊อก ─────────────────────────────────────────────────────────
         stock_ok = deduct_stock(sheets, sku) if sheets and sku else False
@@ -449,9 +427,10 @@ slip_drive_id     = ""
         flash(msg, "success")
         return redirect(url_for("sales"))
 
-    return render_template("new_sale.html", inventory_items=inventory_items,
-                       google_ok=sheets is not None,
-                       google_client_id="530648154117-xxxxxxxxx.apps.googleusercontent.com")
+    return render_template("new_sale.html",
+                           inventory_items=inventory_items,
+                           google_ok=sheets is not None,
+                           google_client_id=GOOGLE_CLIENT_ID)
 
 @app.route("/shipping", methods=["GET", "POST"])
 @login_required
@@ -599,7 +578,7 @@ def admin_users():
                 flash("ลบ account แล้ว", "success")
     users = User.query.all()
     return render_template("admin_users.html", users=users)
-  
+
 def init_db():
     with app.app_context():
         db.create_all()
