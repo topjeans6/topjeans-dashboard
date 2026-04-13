@@ -43,9 +43,8 @@ SCOPES = [
 INVENTORY_SHEET_ID = os.getenv("INVENTORY_SHEET_ID", "1Vzcs4mUnOKk0VwkouBq3m87fdO3xAV7F9na88PVsS0o")
 SALES_SHEET_ID     = os.getenv("SALES_SHEET_ID",     "11iPX3SHK-vt6DlN1rJeUXjXsFeHwSFXXCPNFc-AM4kA")
 
-# ── โฟลเดอร์ Drive แยกตามประเภท ──────────────────────────────────────────────
-DRIVE_PRODUCT_IMAGE_FOLDER_ID  = os.getenv("DRIVE_PRODUCT_IMAGE_FOLDER_ID",  "1In-evxaRoE4-x0qPB087fNEj_IBbeBIP")
-DRIVE_PAYMENT_RECEIPT_FOLDER_ID = os.getenv("DRIVE_PAYMENT_RECEIPT_FOLDER_ID","1oReQhkYf7_RlQE8rMmofcJDUNi2VO0ph")
+DRIVE_PRODUCT_IMAGE_FOLDER_ID   = os.getenv("DRIVE_PRODUCT_IMAGE_FOLDER_ID",   "1In-evxaRoE4-x0qPB087fNEj_IBbeBIP")
+DRIVE_PAYMENT_RECEIPT_FOLDER_ID = os.getenv("DRIVE_PAYMENT_RECEIPT_FOLDER_ID", "1oReQhkYf7_RlQE8rMmofcJDUNi2VO0ph")
 
 SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE", "credentials.json")
 
@@ -88,7 +87,6 @@ class SaleLog(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ── Google Sheets helpers ──────────────────────────────────────────────────────
 def sheets_get(service, sheet_id, range_):
     try:
         res = service.spreadsheets().values().get(
@@ -204,7 +202,6 @@ def deduct_stock(service, sku):
     sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!B{row_num}", [["Sold Out"]])
     return True
 
-# ── Drive Upload แยกโฟลเดอร์ ──────────────────────────────────────────────────
 def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
     try:
         meta  = {"name": filename, "parents": [folder_id]}
@@ -225,7 +222,6 @@ def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
         print(f"[Drive Upload] {e}")
         return None, None
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -364,7 +360,6 @@ def new_sale():
         cost_per_item = get_cost_from_inventory(sheets, sku) if sheets and sku else ""
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        # ── อัพโหลดสลิป → Payment Receipt ────────────────────────────────────
         slip_file = request.files.get("slip")
         if slip_file and slip_file.filename:
             file_bytes = slip_file.read()
@@ -374,68 +369,66 @@ def new_sale():
             if drive:
                 slip_drive_id, slip_url = upload_to_drive(
                     drive, file_bytes, safe_name, mime_type,
-                    DRIVE_PAYMENT_RECEIPT_FOLDER_ID)   # ← Payment Receipt
+                    DRIVE_PAYMENT_RECEIPT_FOLDER_ID)
             if not slip_url:
                 local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
                 with open(local_path, "wb") as f:
                     f.write(file_bytes)
                 slip_url = url_for("uploaded_file", filename=safe_name, _external=True)
 
-        # ── อัพโหลดภาพสินค้า → ภาพปกสินค้าที่ขาย ───────────────────────────
         product_image_file = request.files.get("product_image")
         if product_image_file and product_image_file.filename:
             file_bytes = product_image_file.read()
             mime_type  = product_image_file.mimetype or "image/jpeg"
             ext        = os.path.splitext(product_image_file.filename)[1]
-            safe_name  = f"{sku}{ext}"                 # ← ตั้งชื่อตาม SKU
+            safe_name  = f"{sku}{ext}"
             if drive:
                 _, product_image_url = upload_to_drive(
                     drive, file_bytes, safe_name, mime_type,
-                    DRIVE_PRODUCT_IMAGE_FOLDER_ID)     # ← ภาพปกสินค้าที่ขาย
+                    DRIVE_PRODUCT_IMAGE_FOLDER_ID)
             if not product_image_url:
                 local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
                 with open(local_path, "wb") as f:
                     f.write(file_bytes)
                 product_image_url = url_for("uploaded_file", filename=safe_name, _external=True)
 
-        # ── ตัดสต๊อก ─────────────────────────────────────────────────────────
         stock_ok = deduct_stock(sheets, sku) if sheets and sku else False
 
-        # ── บันทึกลง Sales Sheet ──────────────────────────────────────────────
         sale_row = [
-    order_date,       # A  วันที่สั่งซื้อ
-    username,         # B  ชื่อ User name ลูกค้า
-    platform,         # C  Platform
-    customer,         # D  ชื่อ-สกุล
-    phone,            # E  เบอร์โทร
-    address,          # F  ที่อยู่
-    province,         # G  จังหวัด
-    postcode,         # H  รหัสไปรษณีย์
-    product_name,     # I  สินค้า
-    sku,              # J  SKU
-    link,             # K  Link
-    quantity,         # L  จำนวน/ชิ้น
-    price_normal,     # M  ราคาปกติ
-    price_discount,   # N  ราคาลด
-    price_transfer,   # O  ยอดโอนเต็ม
-    payment_date,     # P  วันที่ชำระ
-    slip_url,         # Q  สลิป (Payment Receipt Link)
-    payment_method,   # R  รูปแบบชำระ
-    cod_fee,          # S  รับค่าบริการ COD
-    cod_deposit,      # T  มัดจำ
-    cod_date,         # U  วันที่รับเงิน COD
-    cod_amount,       # V  จำนวนเงิน COD
-    "",               # W  วันที่ส่ง
-    "",               # X  ค่าส่ง
-    cost_per_item,    # Y  ต้นทุน/ชิ้น
-    "",               # Z  กำไร/ชิ้น
-    "",               # AA ค่า Ads
-    shipping_status,  # AB สถานะการส่ง
-    "",               # AC บริษัทขนส่ง
-    "",               # AD เลขพัสดุ
-    sale_channel,     # AE ช่องทางขาย
-    product_image_url,# AF ภาพสินค้า
-]
+            order_date,        # A  วันที่สั่งซื้อ
+            username,          # B  ชื่อ User name ลูกค้า
+            platform,          # C  Platform
+            customer,          # D  ชื่อ-สกุล
+            phone,             # E  เบอร์โทร
+            address,           # F  ที่อยู่
+            province,          # G  จังหวัด
+            postcode,          # H  รหัสไปรษณีย์
+            product_name,      # I  สินค้า
+            sku,               # J  SKU
+            link,              # K  Link
+            quantity,          # L  จำนวน/ชิ้น
+            price_normal,      # M  ราคาปกติ
+            price_discount,    # N  ราคาลด
+            price_transfer,    # O  ยอดโอนเต็ม
+            payment_date,      # P  วันที่ชำระ
+            slip_url,          # Q  สลิป
+            payment_method,    # R  รูปแบบชำระ
+            cod_fee,           # S  รับค่าบริการ COD
+            cod_deposit,       # T  มัดจำ
+            cod_date,          # U  วันที่รับเงิน COD
+            cod_amount,        # V  จำนวนเงิน COD
+            "",                # W  วันที่ส่ง
+            "",                # X  ค่าส่ง
+            cost_per_item,     # Y  ต้นทุน/ชิ้น
+            "",                # Z  กำไร/ชิ้น
+            "",                # AA ค่า Ads
+            shipping_status,   # AB สถานะการส่ง
+            "",                # AC บริษัทขนส่ง
+            "",                # AD เลขพัสดุ
+            sale_channel,      # AE ช่องทางขาย
+            product_image_url, # AF ภาพสินค้า
+        ]
+
         sheets_ok = False
         if sheets:
             sheets_ok = sheets_append(sheets, SALES_SHEET_ID,
@@ -455,8 +448,8 @@ def new_sale():
         db.session.commit()
 
         msg = f"บันทึกการขาย {sku} เรียบร้อย"
-        if stock_ok:   msg += " · ตัดสต๊อกแล้ว"
-        if sheets_ok:  msg += " · บันทึกใน Google Sheets แล้ว"
+        if stock_ok:  msg += " · ตัดสต๊อกแล้ว"
+        if sheets_ok: msg += " · บันทึกใน Google Sheets แล้ว"
         flash(msg, "success")
         return redirect(url_for("sales"))
 
@@ -609,6 +602,18 @@ def admin_users():
                 flash("ลบ account แล้ว", "success")
     users = User.query.all()
     return render_template("admin_users.html", users=users)
+
+# ── ลบข้อมูลเทส (ใช้ครั้งเดียวแล้วลบ Route นี้ออก) ──────────────────────────
+@app.route("/admin/clear-test-sales")
+@login_required
+def clear_test_sales():
+    if current_user.role != "admin":
+        return "เฉพาะ Admin เท่านั้น"
+    test_skus = ["TJ25040002", "TJ25040011"]
+    deleted = SaleLog.query.filter(
+        SaleLog.sku.in_(test_skus)).delete(synchronize_session=False)
+    db.session.commit()
+    return f"✅ ลบเรียบร้อย {deleted} รายการครับ"
 
 def init_db():
     with app.app_context():
