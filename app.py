@@ -1,22 +1,17 @@
 import os
-import json
-import base64
 import io
 from datetime import datetime
-from functools import wraps
-
 from flask import (Flask, render_template, request, redirect, url_for,
-                   session, flash, jsonify, send_from_directory)
+                   flash, jsonify, send_from_directory)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
-                          login_required, current_user)
+                         login_required, current_user)
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+from PIL import Image
 
 load_dotenv()
 
@@ -207,6 +202,14 @@ def deduct_stock(service, sku):
     sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!B{row_num}", [["Sold Out"]])
     return True
 
+def compress_image(file, max_size=(800, 800), quality=70):
+    img = Image.open(file)
+    img = img.convert("RGB")
+    img.thumbnail(max_size)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=quality)
+    return buf.getvalue()
+
 def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
     try:
         meta  = {"name": filename, "parents": [folder_id]}
@@ -365,19 +368,14 @@ def new_sale():
         cost_per_item = get_cost_from_inventory(sheets, sku) if sheets and sku else ""
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
+        # ── อัพโหลดสลิป → Payment Receipt ────────────────────────────────────
         slip_file = request.files.get("slip")
-if slip_file and slip_file.filename:
-    from PIL import Image
-    img = Image.open(slip_file)
-    img.thumbnail((1200, 1200))
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=80)
-    file_bytes = buf.getvalue()
-    mime_type  = "image/jpeg"
-    safe_name  = f"slip_{sku}_{timestamp}.jpg"
+        if slip_file and slip_file.filename:
+            file_bytes = compress_image(slip_file, max_size=(1200, 1200), quality=80)
+            safe_name  = f"slip_{sku}_{timestamp}.jpg"
             if drive:
                 slip_drive_id, slip_url = upload_to_drive(
-                    drive, file_bytes, safe_name, mime_type,
+                    drive, file_bytes, safe_name, "image/jpeg",
                     DRIVE_PAYMENT_RECEIPT_FOLDER_ID)
             if not slip_url:
                 local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
@@ -385,19 +383,14 @@ if slip_file and slip_file.filename:
                     f.write(file_bytes)
                 slip_url = url_for("uploaded_file", filename=safe_name, _external=True)
 
+        # ── อัพโหลดภาพสินค้า → ภาพปกสินค้าที่ขาย ───────────────────────────
         product_image_file = request.files.get("product_image")
-if product_image_file and product_image_file.filename:
-    from PIL import Image
-    img = Image.open(product_image_file)
-    img.thumbnail((800, 800))
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=70)
-    file_bytes = buf.getvalue()
-    mime_type  = "image/jpeg"
-    safe_name  = f"{sku}.jpg"
+        if product_image_file and product_image_file.filename:
+            file_bytes = compress_image(product_image_file, max_size=(800, 800), quality=70)
+            safe_name  = f"{sku}.jpg"
             if drive:
                 _, product_image_url = upload_to_drive(
-                    drive, file_bytes, safe_name, mime_type,
+                    drive, file_bytes, safe_name, "image/jpeg",
                     DRIVE_PRODUCT_IMAGE_FOLDER_ID)
             if not product_image_url:
                 local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
@@ -405,8 +398,10 @@ if product_image_file and product_image_file.filename:
                     f.write(file_bytes)
                 product_image_url = url_for("uploaded_file", filename=safe_name, _external=True)
 
+        # ── ตัดสต๊อก ─────────────────────────────────────────────────────────
         stock_ok = deduct_stock(sheets, sku) if sheets and sku else False
 
+        # ── บันทึกลง Sales Sheet ──────────────────────────────────────────────
         sale_row = [
             order_date,        # A  วันที่สั่งซื้อ
             username,          # B  ชื่อ User name ลูกค้า
