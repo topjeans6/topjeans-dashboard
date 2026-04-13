@@ -206,15 +206,20 @@ def deduct_stock(service, sku):
 
 # ── Drive Upload แยกโฟลเดอร์ ──────────────────────────────────────────────────
 def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
-    """อัพโหลดไฟล์ไปยัง Google Drive โฟลเดอร์ที่กำหนด"""
     try:
         meta  = {"name": filename, "parents": [folder_id]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type)
         f = drive_service.files().create(
-            body=meta, media_body=media, fields="id,webViewLink").execute()
+            body=meta,
+            media_body=media,
+            fields="id,webViewLink",
+            supportsAllDrives=True
+        ).execute()
         drive_service.permissions().create(
             fileId=f["id"],
-            body={"type": "anyone", "role": "reader"}).execute()
+            body={"type": "anyone", "role": "reader"},
+            supportsAllDrives=True
+        ).execute()
         return f["id"], f.get("webViewLink", "")
     except Exception as e:
         print(f"[Drive Upload] {e}")
