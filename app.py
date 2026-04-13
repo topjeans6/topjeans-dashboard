@@ -34,16 +34,13 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
-INVENTORY_SHEET_ID = os.getenv("INVENTORY_SHEET_ID", "1Vzcs4mUnOKk0VwkouBq3m87fdO3xAV7F9na88PVsS0o")
-SALES_SHEET_ID     = os.getenv("SALES_SHEET_ID",     "11iPX3SHK-vt6DlN1rJeUXjXsFeHwSFXXCPNFc-AM4kA")
-
+INVENTORY_SHEET_ID          = os.getenv("INVENTORY_SHEET_ID", "1Vzcs4mUnOKk0VwkouBq3m87fdO3xAV7F9na88PVsS0o")
+SALES_SHEET_ID              = os.getenv("SALES_SHEET_ID",     "11iPX3SHK-vt6DlN1rJeUXjXsFeHwSFXXCPNFc-AM4kA")
 DRIVE_PRODUCT_IMAGE_FOLDER_ID   = os.getenv("DRIVE_PRODUCT_IMAGE_FOLDER_ID",   "1In-evxaRoE4-x0qPB087fNEj_IBbeBIP")
 DRIVE_PAYMENT_RECEIPT_FOLDER_ID = os.getenv("DRIVE_PAYMENT_RECEIPT_FOLDER_ID", "1oReQhkYf7_RlQE8rMmofcJDUNi2VO0ph")
-
-SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE", "credentials.json")
-
-# ใส่ Client ID ใหม่ที่ได้จาก Google Cloud Console ครับ
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "YOUR_NEW_CLIENT_ID.apps.googleusercontent.com")
+DRIVE_PARENT_FOLDER_ID          = os.getenv("DRIVE_PARENT_FOLDER_ID",          "1oRUw7ujaO3ausktebyOIUwNaBQafXbe7")
+SERVICE_ACCOUNT_FILE            = os.getenv("SERVICE_ACCOUNT_FILE", "credentials.json")
+GOOGLE_CLIENT_ID                = os.getenv("GOOGLE_CLIENT_ID", "YOUR_NEW_CLIENT_ID.apps.googleusercontent.com")
 
 def get_google_services():
     try:
@@ -198,11 +195,56 @@ def find_sales_rows_by_status(service, status="เตรียมส่ง"):
     return results
 
 def deduct_stock(service, sku):
+    """อัพเดต Sold Out + ขาย/ชิ้น = 1 + สต๊อกคงเหลือ = 0"""
     row_num, _ = find_sku_row(service, sku)
     if row_num is None:
         return False
     sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!B{row_num}", [["Sold Out"]])
+    sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!R{row_num}", [[1]])
+    sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!S{row_num}", [[0]])
     return True
+
+def move_sku_to_archive(sku):
+    """ย้ายโฟลเดอร์ SKU ที่ขายแล้วไปยัง Sold_Archive ใน Drive"""
+    try:
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        drive = build("drive", "v3", credentials=creds)
+
+        # หาโฟลเดอร์ชื่อ SKU ใน Parent Folder
+        res = drive.files().list(
+            q=f"name='{sku}' and '{DRIVE_PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+            fields="files(id,name)"
+        ).execute()
+        files = res.get("files", [])
+        if not files:
+            print(f"[Archive] ไม่พบโฟลเดอร์ {sku}")
+            return
+
+        # หา Sold_Archive folder
+        arch_res = drive.files().list(
+            q=f"name='Sold_Archive' and '{DRIVE_PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+            fields="files(id)"
+        ).execute()
+        arch_files = arch_res.get("files", [])
+        if not arch_files:
+            print("[Archive] ไม่พบโฟลเดอร์ Sold_Archive")
+            return
+
+        sku_folder_id     = files[0]["id"]
+        archive_folder_id = arch_files[0]["id"]
+
+        # ย้ายโฟลเดอร์
+        drive.files().update(
+            fileId=sku_folder_id,
+            addParents=archive_folder_id,
+            removeParents=DRIVE_PARENT_FOLDER_ID,
+            fields="id,parents"
+        ).execute()
+        print(f"✅ ย้าย {sku} → Sold_Archive")
+
+    except Exception as e:
+        print(f"[Move to Archive] {e}")
 
 def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
     try:
@@ -358,14 +400,17 @@ def new_sale():
         shipping_status = request.form.get("shipping_status", "เตรียมส่ง")
         notes           = request.form.get("notes", "")
 
-        # ── รับ URL จาก Browser ที่อัพโหลด Drive แล้ว ──────────────────────
         slip_url          = request.form.get("slip_url", "")
         product_image_url = request.form.get("product_image_url", "")
         slip_drive_id     = ""
         cost_per_item     = get_cost_from_inventory(sheets, sku) if sheets and sku else ""
 
-        # ── ตัดสต๊อก ─────────────────────────────────────────────────────────
+        # ── ตัดสต๊อก + อัพเดต ขาย/ชิ้น และ สต๊อกคงเหลือ ───────────────────
         stock_ok = deduct_stock(sheets, sku) if sheets and sku else False
+
+        # ── ย้ายโฟลเดอร์ SKU ไป Sold_Archive ────────────────────────────────
+        if stock_ok:
+            move_sku_to_archive(sku)
 
         # ── บันทึกลง Sales Sheet ──────────────────────────────────────────────
         sale_row = [
