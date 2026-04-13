@@ -366,24 +366,10 @@ def new_sale():
         shipping_status = request.form.get("shipping_status", "เตรียมส่ง")
         notes           = request.form.get("notes", "")
 
-        slip_url = slip_drive_id = product_image_url = ""
-        cost_per_item = get_cost_from_inventory(sheets, sku) if sheets and sku else ""
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-
-        # ── อัพโหลดสลิป → Payment Receipt ────────────────────────────────────
-        slip_file = request.files.get("slip")
-        if slip_file and slip_file.filename:
-            file_bytes = compress_image(slip_file, max_size=(500, 500), quality=50)
-            safe_name  = f"slip_{sku}_{timestamp}.jpg"
-            if drive:
-                slip_drive_id, slip_url = upload_to_drive(
-                    drive, file_bytes, safe_name, "image/jpeg",
-                    DRIVE_PAYMENT_RECEIPT_FOLDER_ID)
-            if not slip_url:
-                local_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
-                with open(local_path, "wb") as f:
-                    f.write(file_bytes)
-                slip_url = url_for("uploaded_file", filename=safe_name, _external=True)
+        # ── รับ URL จาก Browser ที่อัพโหลด Drive แล้ว ──────────────────────
+slip_url          = request.form.get("slip_url", "")
+product_image_url = request.form.get("product_image_url", "")
+slip_drive_id     = ""
 
         # ── อัพโหลดภาพสินค้า → ภาพปกสินค้าที่ขาย ───────────────────────────
         product_image_file = request.files.get("product_image")
