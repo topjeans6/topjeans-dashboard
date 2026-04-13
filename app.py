@@ -23,7 +23,7 @@ if database_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "uploads"
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # ลดเหลือ 5MB
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -202,12 +202,14 @@ def deduct_stock(service, sku):
     sheets_update(service, INVENTORY_SHEET_ID, f"Inventory!B{row_num}", [["Sold Out"]])
     return True
 
-def compress_image(file, max_size=(800, 800), quality=70):
+def compress_image(file, max_size=(500, 500), quality=50):
+    """บีบอัดรูปให้เล็กที่สุดเพื่อประหยัด Memory"""
     img = Image.open(file)
     img = img.convert("RGB")
-    img.thumbnail(max_size)
+    img.thumbnail(max_size, Image.LANCZOS)
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=quality)
+    img.save(buf, format="JPEG", quality=quality, optimize=True)
+    buf.seek(0)
     return buf.getvalue()
 
 def upload_to_drive(drive_service, file_bytes, filename, mime_type, folder_id):
@@ -371,7 +373,7 @@ def new_sale():
         # ── อัพโหลดสลิป → Payment Receipt ────────────────────────────────────
         slip_file = request.files.get("slip")
         if slip_file and slip_file.filename:
-            file_bytes = compress_image(slip_file, max_size=(1200, 1200), quality=80)
+            file_bytes = compress_image(slip_file, max_size=(500, 500), quality=50)
             safe_name  = f"slip_{sku}_{timestamp}.jpg"
             if drive:
                 slip_drive_id, slip_url = upload_to_drive(
@@ -386,7 +388,7 @@ def new_sale():
         # ── อัพโหลดภาพสินค้า → ภาพปกสินค้าที่ขาย ───────────────────────────
         product_image_file = request.files.get("product_image")
         if product_image_file and product_image_file.filename:
-            file_bytes = compress_image(product_image_file, max_size=(800, 800), quality=70)
+            file_bytes = compress_image(product_image_file, max_size=(500, 500), quality=50)
             safe_name  = f"{sku}.jpg"
             if drive:
                 _, product_image_url = upload_to_drive(
